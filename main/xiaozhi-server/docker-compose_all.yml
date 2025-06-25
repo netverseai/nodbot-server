@@ -3,12 +3,12 @@
 version: '3'
 services:
   # Server模块
-  xiaozhi-esp32-server:
-    image: ghcr.nju.edu.cn/xinnan-tech/xiaozhi-esp32-server:server_latest
-    container_name: xiaozhi-esp32-server
+  nodbot-server:
+    image: cheer7w/dockerfile-nodbot-server:server_latest
+    container_name: nodbot-server
     depends_on:
-      - xiaozhi-esp32-server-db
-      - xiaozhi-esp32-server-redis
+      - nodbot-db
+      - nodbot-redis
     restart: always
     networks:
       - default
@@ -28,34 +28,34 @@ services:
       - ./models/SenseVoiceSmall/model.pt:/opt/xiaozhi-esp32-server/models/SenseVoiceSmall/model.pt
 
   # manager-api和manager-web模块
-  xiaozhi-esp32-server-web:
-    image: ghcr.nju.edu.cn/xinnan-tech/xiaozhi-esp32-server:web_latest
-    container_name: xiaozhi-esp32-server-web
+  nodbot-web:
+    image: cheer7w/dockerfile-nodbot-web:web_latest
+    container_name: nodbot-web
     restart: always
     networks:
       - default
     depends_on:
-      xiaozhi-esp32-server-db:
+      nodbot-db:
         condition: service_healthy
-      xiaozhi-esp32-server-redis:
+      nodbot-redis:
         condition: service_healthy
     ports:
       # 智控台
       - "8002:8002"
     environment:
       - TZ=Asia/Shanghai
-      - SPRING_DATASOURCE_DRUID_URL=jdbc:mysql://xiaozhi-esp32-server-db:3306/xiaozhi_esp32_server?useUnicode=true&characterEncoding=UTF-8&serverTimezone=Asia/Shanghai&nullCatalogMeansCurrent=true&connectTimeout=30000&socketTimeout=30000&autoReconnect=true&failOverReadOnly=false&maxReconnects=10
+      - SPRING_DATASOURCE_DRUID_URL=jdbc:mysql://nodbot-db:3306/xiaozhi_esp32_server?useUnicode=true&characterEncoding=UTF-8&serverTimezone=Asia/Shanghai&nullCatalogMeansCurrent=true&connectTimeout=30000&socketTimeout=30000&autoReconnect=true&failOverReadOnly=false&maxReconnects=10
       - SPRING_DATASOURCE_DRUID_USERNAME=root
       - SPRING_DATASOURCE_DRUID_PASSWORD=123456
-      - SPRING_DATA_REDIS_HOST=xiaozhi-esp32-server-redis
+      - SPRING_DATA_REDIS_HOST=nodbot-redis
       - SPRING_DATA_REDIS_PORT=6379
     volumes:
       # 配置文件目录
       - ./uploadfile:/uploadfile
   # 数据库模块
-  xiaozhi-esp32-server-db:
+  nodbot-db:
     image: mysql:latest
-    container_name: xiaozhi-esp32-server-db
+    container_name: nodbot-db
     healthcheck:
       test: [ "CMD", "mysqladmin" ,"ping", "-h", "localhost" ]
       timeout: 45s
@@ -74,11 +74,11 @@ services:
       - MYSQL_DATABASE=xiaozhi_esp32_server
       - MYSQL_INITDB_ARGS="--character-set-server=utf8mb4 --collation-server=utf8mb4_unicode_ci"
   # redis模块
-  xiaozhi-esp32-server-redis:
+  nodbot-redis:
     image: redis
     expose:
       - 6379
-    container_name: xiaozhi-esp32-server-redis
+    container_name: nodbot-redis
     restart: always
     healthcheck:
       test: ["CMD", "redis-cli", "ping"]
