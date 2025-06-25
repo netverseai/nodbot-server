@@ -57,8 +57,8 @@ jobs:
           file: Dockerfile-nodbot-server
           push: true
           tags: |
-            cheer7w/dockerfile-nodbot-server:server_latest
-            ${{ env.IS_VERSION == 'true' && format('cheer7w/dockerfile-nodbot-server:server_{0}', env.VERSION) || '' }}
+            cheer7w/dockerfile-nodbot-server:latest
+            ${{ env.IS_VERSION == 'true' && format('cheer7w/dockerfile-nodbot-server:{0}', env.VERSION) || '' }}
           platforms: linux/amd64,linux/arm64
 
       # 构建 Dockerfile-nodbot-web 镜像
@@ -69,6 +69,6 @@ jobs:
           file: Dockerfile-nodbot-web
           push: true
           tags: |
-            cheer7w/dockerfile-nodbot-web:web_latest
-            ${{ env.IS_VERSION == 'true' && format('cheer7w/dockerfile-nodbot-web:web_{0}', env.VERSION) || '' }}
+            cheer7w/dockerfile-nodbot-web:latest
+            ${{ env.IS_VERSION == 'true' && format('cheer7w/dockerfile-nodbot-web:{0}', env.VERSION) || '' }}
           platforms: linux/amd64,linux/arm64
