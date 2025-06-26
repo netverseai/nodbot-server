@@ -136,9 +136,6 @@ dmypy.json
 # music directory
 music/
 
-# mysql data
-mysql/data/
-
 # pytype static type analyzer
 .pytype/
 
@@ -178,6 +175,3 @@ main/xiaozhi-server/mysql
 uploadfile
 *.json
 .vscode
-
-# docker test
-docker-compose_all.yml
