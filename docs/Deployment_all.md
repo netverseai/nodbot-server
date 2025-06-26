@@ -107,7 +107,7 @@ docker compose -f docker-compose_all.yml up -d
 执行完后，再执行以下命令，查看日志信息。
 
 ```
-docker logs -f xiaozhi-esp32-server-web
+docker logs -f nodbot-web
 ```
 
 当你看到输出日志时，说明你的`智控台`启动成功了。
@@ -141,14 +141,10 @@ manager-api:
 
 2、因为你是docker部署，把`url`改成下面的`http://xiaozhi-esp32-server-web:8002/xiaozhi`
 
-3、因为你是docker部署，把`url`改成下面的`http://xiaozhi-esp32-server-web:8002/xiaozhi`
-
-4、因为你是docker部署，把`url`改成下面的`http://xiaozhi-esp32-server-web:8002/xiaozhi`
-
 类似这样的效果
 ```
 manager-api:
-  url: http://xiaozhi-esp32-server-web:8002/xiaozhi
+  url: http://nodbot-web:8002/xiaozhi
   secret: 12345678-xxxx-xxxx-xxxx-123456789000
 ```
 
@@ -163,8 +159,8 @@ manager-api:
 
 接下来打开命令行工具，使用`终端`或`命令行`工具 输入
 ```
-docker restart xiaozhi-esp32-server
-docker logs -f xiaozhi-esp32-server
+docker restart nodbot-server
+docker logs -f nodbot-server
 ```
 如果你能看到，类似以下日志,则是Server启动成功的标志。
 

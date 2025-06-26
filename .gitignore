@@ -136,6 +136,9 @@ dmypy.json
 # music directory
 music/
 
+# mysql data
+mysql/data/
+
 # pytype static type analyzer
 .pytype/
 
@@ -168,9 +171,13 @@ my_wakeup_words.mp3
 !main/xiaozhi-server/config/assets/bind_code/*.wav
 !main/xiaozhi-server/config/assets/max_output_size.wav
 main/manager-api/.vscode
+
 # Ignore webpack cache directory
 main/manager-web/.webpack_cache/
 main/xiaozhi-server/mysql
 uploadfile
 *.json
 .vscode
+
+# docker test
+docker-compose_all.yml

@@ -4,7 +4,7 @@ version: '3'
 services:
   # Server模块
   nodbot-server:
-    image: cheer7w/dockerfile-nodbot-server:server_latest
+    image: cheer7w/dockerfile-nodbot-server:latest
     container_name: nodbot-server
     depends_on:
       - nodbot-db
@@ -29,7 +29,7 @@ services:
 
   # manager-api和manager-web模块
   nodbot-web:
-    image: cheer7w/dockerfile-nodbot-web:web_latest
+    image: cheer7w/dockerfile-nodbot-web:latest
     container_name: nodbot-web
     restart: always
     networks:
