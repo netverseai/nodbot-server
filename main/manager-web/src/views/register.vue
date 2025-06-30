@@ -1,117 +1,146 @@
 <template>
   <div class="welcome" @keyup.enter="register">
-    <el-container style="height: 100%;">
+    <el-container class="auth-page-container">
       <!-- 保持相同的头部 -->
-      <el-header>
-        <div style="display: flex;align-items: center;margin-top: 15px;margin-left: 10px;gap: 10px;">
-          <img loading="lazy" alt="" src="@/assets/xiaozhi-logo.png" style="width: 45px;height: 45px;" />
-          <img loading="lazy" alt="" src="@/assets/xiaozhi-ai.png" style="height: 18px;" />
+      <el-header class="auth-header">
+        <div class="logo-container">
+          <img loading="lazy" alt="logo" src="@/assets/xiaozhi-logo.png" class="logo-img" />
+          <img loading="lazy" alt="logo-text" src="@/assets/xiaozhi-ai.png" class="logo-text-img" />
         </div>
       </el-header>
-      <div class="login-person">
-        <img loading="lazy" alt="" src="@/assets/login/register-person.png" style="width: 100%;" />
-      </div>
-      <el-main style="position: relative;">
-        <div class="login-box">
-          <!-- 修改标题部分 -->
-          <div style="display: flex;align-items: center;gap: 20px;margin-bottom: 39px;padding: 0 30px;">
-            <img loading="lazy" alt="" src="@/assets/login/hi.png" style="width: 34px;height: 34px;" />
-            <div class="login-text">注册</div>
-            <div class="login-welcome">
-              WELCOME TO REGISTER
+      <el-main class="auth-main">
+        <div class="auth-container">
+          <div class="login-person">
+            <img loading="lazy" alt="" src="@/assets/login/register-person.png" style="width: 100%;" />
+          </div>
+          <div class="login-box">
+            <!-- 修改标题部分 -->
+            <div class="login-header">
+              <img loading="lazy" alt="" src="@/assets/login/hi.png" class="hi-img" />
+              <div class="login-text">注册</div>
+              <div class="login-welcome">
+                WELCOME TO REGISTER
+              </div>
             </div>
-          </div>
 
-          <div style="padding: 0 30px;">
-            <form @submit.prevent="register">
-              <!-- 用户名/手机号输入框 -->
-              <div class="input-box" v-if="!enableMobileRegister">
-                <img loading="lazy" alt="" class="input-icon" src="@/assets/login/username.png" />
-                <el-input v-model="form.username" placeholder="请输入用户名" />
-              </div>
-
-              <!-- 手机号注册部分 -->
-              <template v-if="enableMobileRegister">
-                <div class="input-box">
-                  <div style="display: flex; align-items: center; width: 100%;">
-                    <el-select v-model="form.areaCode" style="width: 220px; margin-right: 10px;">
-                      <el-option v-for="item in mobileAreaList" :key="item.key" :label="`${item.name} (${item.key})`"
-                        :value="item.key" />
-                    </el-select>
-                    <el-input v-model="form.mobile" placeholder="请输入手机号码" />
+            <div class="login-form-container">
+              <el-form :model="form" ref="registerForm" class="login-form">
+                <!-- 用户名/手机号输入框 -->
+                <el-form-item prop="username" v-if="!enableMobileRegister">
+                  <div class="input-box">
+                    <img loading="lazy" alt="" class="input-icon" src="@/assets/login/username.png" />
+                    <el-input v-model="form.username" placeholder="请输入用户名" />
                   </div>
-                </div>
+                </el-form-item>
 
-                <div style="display: flex; align-items: center; margin-top: 20px; width: 100%; gap: 10px;">
-                  <div class="input-box" style="width: calc(100% - 130px); margin-top: 0;">
-                    <img loading="lazy" alt="" class="input-icon" src="@/assets/login/shield.png" />
-                    <el-input v-model="form.captcha" placeholder="请输入验证码" style="flex: 1;" />
+                <!-- 手机号注册部分 -->
+                <template v-if="enableMobileRegister">
+                  <el-form-item prop="mobile">
+                    <div class="input-box">
+                      <el-row :gutter="10" style="width: 100%">
+                        <el-col :xs="12" :sm="10">
+                          <el-select v-model="form.areaCode">
+                            <el-option v-for="item in mobileAreaList" :key="item.key"
+                              :label="`${item.name} (${item.key})`" :value="item.key" />
+                          </el-select>
+                        </el-col>
+                        <el-col :xs="12" :sm="14">
+                          <el-input v-model="form.mobile" placeholder="请输入手机号码" />
+                        </el-col>
+                      </el-row>
+                    </div>
+                  </el-form-item>
+
+                  <el-form-item prop="captcha">
+                    <el-row :gutter="10" type="flex" align="middle">
+                      <el-col :span="14">
+                        <div class="input-box" style="margin-top: 0;">
+                          <img loading="lazy" alt="" class="input-icon" src="@/assets/login/shield.png" />
+                          <el-input v-model="form.captcha" placeholder="请输入验证码" />
+                        </div>
+                      </el-col>
+                      <el-col :span="10">
+                        <img v-if="captchaUrl" :src="captchaUrl" alt="验证码" class="captcha-img" @click="fetchCaptcha" />
+                      </el-col>
+                    </el-row>
+                  </el-form-item>
+
+                  <!-- 手机验证码 -->
+                  <el-form-item prop="mobileCaptcha">
+                    <el-row :gutter="10" type="flex" align="middle">
+                      <el-col :span="14">
+                        <div class="input-box" style="margin-top: 0;">
+                          <img loading="lazy" alt="" class="input-icon" src="@/assets/login/phone.png" />
+                          <el-input v-model="form.mobileCaptcha" placeholder="请输入手机验证码" maxlength="6" />
+                        </div>
+                      </el-col>
+                      <el-col :span="10">
+                        <el-button type="primary" class="send-captcha-btn" :disabled="!canSendMobileCaptcha"
+                          @click="sendMobileCaptcha">
+                          <span>
+                            {{ countdown > 0 ? `${countdown}秒后重试` : '发送验证码' }}
+                          </span>
+                        </el-button>
+                      </el-col>
+                    </el-row>
+                  </el-form-item>
+                </template>
+
+                <!-- 密码输入框 -->
+                <el-form-item prop="password">
+                  <div class="input-box">
+                    <img loading="lazy" alt="" class="input-icon" src="@/assets/login/password.png" />
+                    <el-input v-model="form.password" placeholder="请输入密码" type="password" />
                   </div>
-                  <img loading="lazy" v-if="captchaUrl" :src="captchaUrl" alt="验证码"
-                    style="width: 150px; height: 40px; cursor: pointer;" @click="fetchCaptcha" />
-                </div>
+                </el-form-item>
 
-                <!-- 手机验证码 -->
-
-                <div style="display: flex; align-items: center; margin-top: 20px; width: 100%; gap: 10px;">
-                  <div class="input-box" style="width: calc(100% - 130px); margin-top: 0;">
-                    <img loading="lazy" alt="" class="input-icon" src="@/assets/login/phone.png" />
-                    <el-input v-model="form.mobileCaptcha" placeholder="请输入手机验证码" style="flex: 1;" maxlength="6" />
+                <!-- 新增确认密码 -->
+                <el-form-item prop="confirmPassword">
+                  <div class="input-box">
+                    <img loading="lazy" alt="" class="input-icon" src="@/assets/login/password.png" />
+                    <el-input v-model="form.confirmPassword" placeholder="请确认密码" type="password" />
                   </div>
-                  <el-button type="primary" class="send-captcha-btn" :disabled="!canSendMobileCaptcha"
-                    @click="sendMobileCaptcha">
-                    <span>
-                      {{ countdown > 0 ? `${countdown}秒后重试` : '发送验证码' }}
-                    </span>
-                  </el-button>
-                </div>
-              </template>
+                </el-form-item>
 
-              <!-- 密码输入框 -->
-              <div class="input-box">
-                <img loading="lazy" alt="" class="input-icon" src="@/assets/login/password.png" />
-                <el-input v-model="form.password" placeholder="请输入密码" type="password" />
-              </div>
+                <!-- 验证码部分保持相同 -->
+                <el-form-item prop="captcha" v-if="!enableMobileRegister">
+                  <el-row :gutter="10" type="flex" align="middle">
+                    <el-col :span="14">
+                      <div class="input-box" style="margin-top: 0;">
+                        <img loading="lazy" alt="" class="input-icon" src="@/assets/login/shield.png" />
+                        <el-input v-model="form.captcha" placeholder="请输入验证码" />
+                      </div>
+                    </el-col>
+                    <el-col :span="10">
+                      <img v-if="captchaUrl" :src="captchaUrl" alt="验证码" class="captcha-img" @click="fetchCaptcha" />
+                    </el-col>
+                  </el-row>
+                </el-form-item>
 
-              <!-- 新增确认密码 -->
-              <div class="input-box">
-                <img loading="lazy" alt="" class="input-icon" src="@/assets/login/password.png" />
-                <el-input v-model="form.confirmPassword" placeholder="请确认密码" type="password" />
-              </div>
+                <!-- 修改底部链接 -->
+                <el-form-item>
+                  <div class="link-btn" @click="goToLogin">已有账号？立即登录</div>
+                </el-form-item>
 
-              <!-- 验证码部分保持相同 -->
-              <div v-if="!enableMobileRegister"
-                style="display: flex; align-items: center; margin-top: 20px; width: 100%; gap: 10px;">
-                <div class="input-box" style="width: calc(100% - 130px); margin-top: 0;">
-                  <img loading="lazy" alt="" class="input-icon" src="@/assets/login/shield.png" />
-                  <el-input v-model="form.captcha" placeholder="请输入验证码" style="flex: 1;" />
-                </div>
-                <img loading="lazy" v-if="captchaUrl" :src="captchaUrl" alt="验证码"
-                  style="width: 150px; height: 40px; cursor: pointer;" @click="fetchCaptcha" />
-              </div>
+                <el-form-item>
+                  <div class="login-btn" @click="register">立即注册</div>
+                </el-form-item>
+              </el-form>
+            </div>
 
-              <!-- 修改底部链接 -->
-              <div style="font-weight: 400;font-size: 14px;text-align: left;color: #5778ff;margin-top: 20px;">
-                <div style="cursor: pointer;" @click="goToLogin">已有账号？立即登录</div>
-              </div>
-            </form>
-          </div>
-
-          <!-- 修改按钮文本 -->
-          <div class="login-btn" @click="register">立即注册</div>
-
-          <!-- 保持相同的协议声明 -->
-          <div style="font-size: 14px;color: #979db1;">
-            注册即同意
-            <div style="display: inline-block;color: #5778FF;cursor: pointer;">《用户协议》</div>
-            和
-            <div style="display: inline-block;color: #5778FF;cursor: pointer;">《隐私政策》</div>
+            <!-- 保持相同的协议声明 -->
+            <div class="terms-text">
+              注册即同意
+              <span class="link-btn">《用户协议》</span>
+              和
+              <span class="link-btn">《隐私政策》</span>
+            </div>
           </div>
         </div>
       </el-main>
 
       <!-- 保持相同的页脚 -->
-      <el-footer>
+      <el-footer class="auth-footer">
         <version-footer />
       </el-footer>
     </el-container>
@@ -298,20 +327,124 @@ export default {
 <style lang="scss" scoped>
 @import './auth.scss';
 
-.send-captcha-btn {
-  margin-right: -5px;
-  min-width: 100px;
-  height: 40px;
-  line-height: 40px;
-  border-radius: 4px;
-  font-size: 14px;
-  background: rgb(87, 120, 255);
-  border: none;
-  padding: 0px;
+.auth-page-container {
+  height: 100vh;
+}
 
-  &:disabled {
-    background: #c0c4cc;
-    cursor: not-allowed;
+.auth-header {
+  height: auto;
+  padding: 15px 20px;
+}
+
+.logo-container {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.logo-img {
+  width: 45px;
+  height: 45px;
+}
+
+.logo-text-img {
+  height: 18px;
+}
+
+.auth-main {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.login-header {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  margin-bottom: 30px;
+  padding: 0 30px;
+}
+
+.hi-img {
+  width: 34px;
+  height: 34px;
+}
+
+.login-form-container {
+  padding: 0 30px;
+}
+
+.captcha-img {
+  width: 100%;
+  height: 40px;
+  cursor: pointer;
+  border-radius: 8px;
+}
+
+.link-btn {
+  color: #5778ff;
+  cursor: pointer;
+  transition: color 0.3s;
+}
+
+.link-btn:hover {
+  color: #4a6ae8;
+}
+
+.login-btn {
+  width: 100%;
+  margin: 0;
+}
+
+.send-captcha-btn {
+  width: 100%;
+  height: 40px;
+}
+
+.terms-text {
+  font-size: 14px;
+  color: #979db1;
+  text-align: center;
+  padding: 0 30px 20px;
+}
+
+.auth-footer {
+  height: auto;
+}
+
+:deep(.el-form-item) {
+  margin-bottom: 20px;
+}
+
+:deep(.el-input-group__append),
+:deep(.el-input-group__prepend) {
+  background-color: #f6f8fb;
+  border: 1px solid #e4e6ef;
+}
+
+:deep(.el-select .el-input__inner) {
+  padding: 0 10px;
+}
+
+@media (max-width: 480px) {
+  .login-header {
+    padding: 0 15px;
+    gap: 10px;
+    margin-bottom: 20px;
+  }
+
+  .login-form-container {
+    padding: 0 15px;
+  }
+
+  .terms-text {
+    padding: 0 15px 15px;
+  }
+
+  .send-captcha-btn {
+    padding: 10px;
+    height: auto;
+    font-size: 12px;
   }
 }
 </style>

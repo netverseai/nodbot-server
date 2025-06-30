@@ -1,19 +1,36 @@
 .welcome {
-  min-width: 1200px;
-  min-height: 675px;
-  height: 100vh;
+  min-height: 100vh;
   display: flex;
   align-items: center;
   justify-content: center;
-  background: linear-gradient(145deg, #f5f8fd, #6baaff, #9ebbfc, #f5f8fd);
-  background-size: cover;
-  /* 确保背景图像覆盖整个元素 */
-  background-position: center;
-  /* 从顶部中心对齐 */
-  -webkit-background-size: cover;
-  /* 兼容老版本WebKit浏览器 */
-  -o-background-size: cover;
-  /* 兼容老版本Opera浏览器 */
+  background: linear-gradient(145deg, #fdecec, #ff6b6b, #ed1c24, #fdecec);
+  background-size: 400% 400%;
+  animation: gradientBG 15s ease infinite;
+  padding: 20px;
+  box-sizing: border-box;
+}
+
+@keyframes gradientBG {
+  0% {
+    background-position: 0% 50%;
+  }
+
+  50% {
+    background-position: 100% 50%;
+  }
+
+  100% {
+    background-position: 0% 50%;
+  }
+}
+
+.auth-container {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 5%;
+  width: 100%;
+  max-width: 1200px;
 }
 
 .login-text {
@@ -33,22 +50,25 @@
 }
 
 .login-box {
-  position: absolute;
-  top: 50%;
-  transform: translateY(-50%);
-  right: 18%;
   background-color: #fff;
   border-radius: 20px;
   padding: 35px 0;
-  width: 450px;
+  width: 100%;
+  max-width: 450px;
   box-sizing: border-box;
+  flex-shrink: 0;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+  transition: all 0.3s ease;
 }
 
 .el-dropdown-link {
   font-weight: 400;
   font-size: 14px;
   text-align: left;
-  color: #979db1;
+  color: #fff;
+  line-height: 35px;
+  margin: 15px 30px 15px 30px;
+  transition: background-color 0.3s ease;
 }
 
 .input-icon {
@@ -59,7 +79,7 @@
 
 .login-btn {
   height: 35px;
-  background: #5778ff;
+  background: #ed1c24;
   border-radius: 10px;
   font-weight: 400;
   font-size: 14px;
@@ -69,6 +89,10 @@
   margin: 15px 30px 15px 30px;
 }
 
+.login-btn:hover {
+  background: #c6121b;
+}
+
 .input-box {
   display: flex;
   margin-top: 20px;
@@ -76,9 +100,16 @@
   border-radius: 10px;
   background: #f6f8fb;
   border: 1px solid #e4e6ef;
-  height: 40px;
-  padding: 0 15px;
-  gap: 20px;
+  height: auto;
+  min-height: 40px;
+  padding: 5px 15px;
+  gap: 15px;
+  transition: all 0.3s ease;
+}
+
+.input-box:focus-within {
+  border-color: #ed1c24;
+  box-shadow: 0 0 5px rgba(237, 28, 36, 0.5);
 }
 
 ::v-deep {
@@ -105,7 +136,7 @@
   }
 
   .el-tabs__item.is-active {
-    color: #5778ff;
+    color: #ed1c24;
   }
 
   .el-tabs__nav-scroll {
@@ -115,17 +146,104 @@
   .el-input__inner {
     border: none;
     background-color: transparent;
-    height: 56px;
-    padding: 0;
+    height: auto;
+    line-height: 1.5;
+    padding: 5px 0;
   }
 }
 
 .login-person {
   width: 500px;
+  max-width: 45%;
   color: #fff;
-  position: absolute;
-  top: 50%;
-  left: 25%;
-  transform: translate(-50%, -50%);
-  z-index: 1;
+}
+
+@media (max-width: 992px) {
+  .auth-container {
+    flex-direction: column;
+    text-align: center;
+    gap: 2rem;
+  }
+
+  .login-person {
+    max-width: 300px;
+    width: 80%;
+    margin-bottom: 0;
+  }
+
+  .login-box {
+    width: 100%;
+    max-width: 500px;
+  }
+}
+
+@media (max-width: 768px) {
+  .welcome {
+    padding-top: 5vh;
+    align-items: flex-start;
+  }
+
+  .login-person {
+    display: none;
+  }
+
+  .login-box {
+    padding: 20px 0;
+    background-color: transparent;
+    box-shadow: none;
+  }
+
+  .login-text {
+    font-size: 28px;
+  }
+
+  .input-box {
+    flex-direction: column;
+    align-items: stretch;
+    padding: 10px;
+    gap: 5px;
+    height: auto;
+  }
+
+  .input-icon {
+    align-self: center;
+  }
+
+  .input-box .el-select {
+    width: 100% !important;
+  }
+}
+
+@media (max-width: 480px) {
+  .login-box {
+    padding: 15px 0;
+  }
+
+  .login-text {
+    font-size: 24px;
+  }
+
+  .login-btn {
+    margin: 15px 20px;
+  }
+
+  .input-box {
+    margin-top: 15px;
+  }
+
+  .login-welcome {
+    display: none;
+  }
+
+  .login-box {
+    .el-form-item {
+      margin-bottom: 15px;
+    }
+  }
+
+  ::v-deep {
+    .el-tabs__nav-scroll {
+      padding: 0 20px;
+    }
+  }
 }

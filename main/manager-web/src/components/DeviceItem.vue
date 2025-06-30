@@ -1,41 +1,61 @@
 <template>
   <div class="device-item">
-    <div style="display: flex;justify-content: space-between;">
-      <div style="font-weight: 700;font-size: 18px;text-align: left;color: #3d4566;">
-        {{ device.agentName }}
-      </div>
-      <div>
-        <img src="@/assets/home/delete.png" alt="" style="width: 18px;height: 18px;margin-right: 10px;"
-          @click.stop="handleDelete" />
-        <el-tooltip class="item" effect="dark" :content="device.systemPrompt" placement="top"
-          popper-class="custom-tooltip">
-          <img src="@/assets/home/info.png" alt="" style="width: 18px;height: 18px;" />
+    <div class="device-header">
+      <div class="device-title">{{ device.agentName }}</div>
+      <div class="device-actions">
+        <el-tooltip content="删除" placement="top">
+          <img src="@/assets/home/delete.png" alt="删除" class="action-icon" @click.stop="handleDelete" />
+        </el-tooltip>
+        <el-tooltip class="item" effect="dark" :content="device.systemPrompt" placement="top" popper-class="custom-tooltip">
+          <img src="@/assets/home/info.png" alt="信息" class="action-icon" />
         </el-tooltip>
       </div>
     </div>
-    <div class="device-name">
-      语言模型：{{ device.llmModelName }}
-    </div>
-    <div class="device-name">
-      音色模型：{{ device.ttsModelName }} ({{ device.ttsVoiceName }})
-    </div>
-    <div style="display: flex;gap: 10px;align-items: center;">
-      <div class="settings-btn" @click="handleConfigure">
-        配置角色
+
+    <div class="device-info">
+      <div class="info-item">
+        <span class="info-label">语言模型：</span>
+        <span class="info-value">{{ device.llmModelName }}</span>
       </div>
-      <div class="settings-btn" @click="handleDeviceManage">
-        设备管理({{ device.deviceCount }})
-      </div>
-      <div class="settings-btn" @click="handleChatHistory"
-        :class="{ 'disabled-btn': device.memModelId === 'Memory_nomem' }">
-        <el-tooltip v-if="device.memModelId === 'Memory_nomem'" content="请先在“配置角色”界面开启记忆" placement="top">
-          <span>聊天记录</span>
-        </el-tooltip>
-        <span v-else>聊天记录</span>
+      <div class="info-item">
+        <span class="info-label">音色模型：</span>
+        <span class="info-value">{{ device.ttsModelName }} ({{ device.ttsVoiceName }})</span>
       </div>
     </div>
-    <div class="version-info">
-      <div>最近对话：{{ formattedLastConnectedTime }}</div>
+
+    <div class="device-actions-group">
+      <el-button class="action-btn" type="primary" @click="handleConfigure">配置角色</el-button>
+      <el-button class="action-btn" type="primary" plain @click="handleDeviceManage">设备管理({{ device.deviceCount }})</el-button>
+      <el-tooltip 
+        v-if="device.memModelId === 'Memory_nomem'" 
+        content="请先在配置角色界面开启记忆" 
+        placement="top"
+        popper-class="memory-tooltip"
+      >
+        <div style="display: inline-block;">
+          <el-button 
+            class="action-btn"
+            type="primary"
+            plain
+            disabled
+          >
+            聊天记录
+          </el-button>
+        </div>
+      </el-tooltip>
+      <el-button 
+        v-else
+        class="action-btn"
+        type="primary"
+        plain
+        @click="handleChatHistory"
+      >
+        聊天记录
+      </el-button>
+    </div>
+
+    <div class="device-footer">
+      <div class="last-chat">最近对话：{{ formattedLastConnectedTime }}</div>
     </div>
   </div>
 </template>
@@ -89,53 +109,203 @@ export default {
   }
 }
 </script>
-<style scoped>
+
+<style lang="scss" scoped>
 .device-item {
-  width: 342px;
-  border-radius: 20px;
-  background: #fafcfe;
-  padding: 22px;
+  background: white;
+  border-radius: 12px;
+  padding: 24px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+  transition: all 0.3s;
+  width: 100%;
   box-sizing: border-box;
+
+  &:hover {
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+    transform: translateY(-2px);
+  }
 }
 
-.device-name {
-  margin: 7px 0 10px;
-  font-weight: 400;
-  font-size: 11px;
-  color: #3d4566;
-  text-align: left;
-}
-
-.settings-btn {
-  font-weight: 500;
-  font-size: 12px;
-  color: #5778ff;
-  background: #e6ebff;
-  width: auto;
-  padding: 0 12px;
-  height: 21px;
-  line-height: 21px;
-  cursor: pointer;
-  border-radius: 14px;
-}
-
-.version-info {
+.device-header {
   display: flex;
   justify-content: space-between;
-  margin-top: 15px;
-  font-size: 12px;
-  color: #979db1;
-  font-weight: 400;
+  align-items: center;
+  margin-bottom: 16px;
 }
 
-.disabled-btn {
-  background: #e6e6e6;
+.device-title {
+  font-size: 18px;
+  font-weight: 600;
+  color: #333;
+}
+
+.device-actions {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+}
+
+.action-icon {
+  width: 20px;
+  height: 20px;
+  cursor: pointer;
+  opacity: 0.6;
+  transition: all 0.3s;
+
+  &:hover {
+    opacity: 1;
+  }
+}
+
+.device-info {
+  margin-bottom: 20px;
+}
+
+.info-item {
+  margin-bottom: 8px;
+  font-size: 14px;
+  color: #666;
+
+  &:last-child {
+    margin-bottom: 0;
+  }
+}
+
+.info-label {
   color: #999;
-  cursor: not-allowed;
+}
+
+.info-value {
+  color: #333;
+}
+
+.device-actions-group {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.action-btn {
+  height: 32px;
+  padding: 0 16px;
+  font-size: 13px;
+  border-radius: 6px;
+
+  &.el-button--primary {
+    background-color: #ed1c24;
+    border-color: #ed1c24;
+
+    &:hover, &:focus {
+      background-color: #c6121b;
+      border-color: #c6121b;
+    }
+
+    &.is-plain {
+      background-color: transparent;
+      color: #ed1c24;
+
+      &:hover, &:focus {
+        background-color: rgba(237, 28, 36, 0.1);
+        border-color: #c6121b;
+        color: #c6121b;
+      }
+
+      &[disabled] {
+        background-color: #f5f5f5;
+        border-color: #ddd;
+        color: #999;
+
+        &:hover, &:focus {
+          background-color: #f5f5f5;
+          border-color: #ddd;
+          color: #999;
+        }
+      }
+    }
+  }
+
+  &.el-button--default {
+    color: #ed1c24;
+    border-color: #ed1c24;
+    background: transparent;
+
+    &:hover, &:focus {
+      color: #c6121b;
+      border-color: #c6121b;
+      background-color: rgba(237, 28, 36, 0.1);
+    }
+  }
+
+  &.disabled {
+    background-color: #f5f5f5;
+    border-color: #ddd;
+    color: #999;
+    cursor: not-allowed;
+
+    &:hover, &:focus {
+      background-color: #f5f5f5;
+      border-color: #ddd;
+      color: #999;
+    }
+  }
+}
+
+.device-footer {
+  margin-top: 20px;
+  padding-top: 16px;
+  border-top: 1px solid #f0f0f0;
+}
+
+.last-chat {
+  font-size: 13px;
+  color: #999;
+}
+
+.custom-tooltip {
+  max-width: 400px;
+  word-break: break-word;
+  font-size: 13px;
+  line-height: 1.5;
+  padding: 8px 12px;
+}
+
+.memory-tooltip {
+  font-size: 13px;
+  padding: 8px 12px;
+  line-height: 1.4;
+  max-width: 200px;
+  word-break: keep-all;
+  white-space: nowrap;
+}
+
+@media screen and (max-width: 768px) {
+  .device-item {
+    padding: 20px;
+  }
+
+  .device-title {
+    font-size: 16px;
+  }
+
+  .info-item {
+    font-size: 13px;
+  }
+
+  .action-btn {
+    height: 30px;
+    padding: 0 12px;
+    font-size: 12px;
+  }
 }
 </style>
 
 <style>
+.memory-tooltip {
+  font-size: 13px !important;
+  padding: 8px 12px !important;
+  line-height: 1.4 !important;
+}
+
 .custom-tooltip {
   max-width: 400px;
   word-break: break-word;

@@ -10,9 +10,9 @@ sudo apt-get install docker-ce docker-ce-cli containerd.io docker-buildx-plugin 
 ```
 #进入项目根目录
 # 编译server
-docker build -t xiaozhi-esp32-server:server_latest -f ./Dockerfile-server .
+docker build --platform linux/arm64 -t dockerfile-nodbot-server:latest -f ./Dockerfile-nodbot-server .
 # 编译web
-docker build -t xiaozhi-esp32-server:web_latest -f ./Dockerfile-web .
+docker build --platform linux/arm64 -t dockerfile-nodbot-web:latest -f ./Dockerfile-nodbot-web .
 
 # 编译完成后，可以使用docker-compose启动项目
 # docker-compose.yml你需要修改成自己编译的镜像版本

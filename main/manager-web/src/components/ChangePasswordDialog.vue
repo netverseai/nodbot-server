@@ -1,49 +1,73 @@
 <template>
-  <form>
-    <el-dialog :visible.sync="dialogVisible"  width="24%" center>
-      <div
-        style="margin: 0 10px 10px;display: flex;align-items: center;gap: 10px;font-weight: 700;font-size: 20px;text-align: left;color: #3d4566;">
-        <div
-          style="width: 40px;height: 40px;border-radius: 50%;background: #5778ff;display: flex;align-items: center;justify-content: center;">
-          <img loading="lazy" src="@/assets/login/shield.png" alt=""
-            style="width: 19px;height: 23px; filter: brightness(0) invert(1);" />
-        </div>
-        修改密码
+  <el-dialog
+    :visible.sync="dialogVisible"
+    width="400px"
+    :show-close="false"
+    :close-on-click-modal="false"
+    :close-on-press-escape="false"
+    :append-to-body="true"
+    center
+    custom-class="change-password-dialog"
+    @close="handleClose"
+  >
+    <div class="dialog-header">
+      <div class="header-icon">
+        <img loading="lazy" src="@/assets/login/shield.png" alt="" />
       </div>
-      <div style="height: 1px;background: #e8f0ff;" />
-      <div style="margin: 22px 15px;">
-        <div style="font-weight: 400;font-size: 14px;text-align: left;color: #3d4566;">
-          <div style="color: red;display: inline-block;">*</div>
-          旧密码：
+      <span>修改密码</span>
+    </div>
+
+    <div class="dialog-divider"></div>
+
+    <div class="dialog-content">
+      <div class="form-group">
+        <div class="form-label">
+          <span class="required">*</span>
+          <span>旧密码：</span>
         </div>
-        <div class="input-46" style="margin-top: 12px;">
-          <el-input placeholder="请输入旧密码" v-model="oldPassword" type="password" show-password />
-        </div>
-        <div style="font-weight: 400;font-size: 14px;text-align: left;color: #3d4566;margin-top: 12px;">
-          <div style="color: red;display: inline-block;">*</div>
-          新密码：
-        </div>
-        <div class="input-46" style="margin-top: 12px;">
-          <el-input placeholder="请输入新密码" v-model="newPassword" type="password" show-password />
-        </div>
-        <div style="font-weight: 400;font-size: 14px;text-align: left;color: #3d4566;margin-top: 12px;">
-          <div style="color: red;display: inline-block;">*</div>
-          确认新密码：
-        </div>
-        <div class="input-46" style="margin-top: 12px;">
-          <el-input placeholder="请再次输入新密码" v-model="confirmNewPassword" type="password" show-password />
-        </div>
+        <el-input
+          v-model="oldPassword"
+          type="password"
+          placeholder="请输入旧密码"
+          show-password
+          @keyup.enter.native="confirm"
+        />
       </div>
-      <div style="display: flex;margin: 15px 15px;gap: 7px;">
-        <div class="dialog-btn" @click="confirm">
-          确定
+
+      <div class="form-group">
+        <div class="form-label">
+          <span class="required">*</span>
+          <span>新密码：</span>
         </div>
-        <div class="dialog-btn" style="background: #e6ebff;border: 1px solid #adbdff;color: #5778ff;" @click="cancel">
-          取消
-        </div>
+        <el-input
+          v-model="newPassword"
+          type="password"
+          placeholder="请输入新密码"
+          show-password
+          @keyup.enter.native="confirm"
+        />
       </div>
-    </el-dialog>
-  </form>
+
+      <div class="form-group">
+        <div class="form-label">
+          <span class="required">*</span>
+          <span>确认新密码：</span>
+        </div>
+        <el-input
+          v-model="confirmNewPassword"
+          type="password"
+          placeholder="请再次输入新密码"
+          show-password
+          @keyup.enter.native="confirm"
+        />
+      </div>
+    </div>
+
+    <div class="dialog-footer">
+      <el-button type="primary" class="confirm-btn" @click="confirm" :loading="loading">确定</el-button>
+      <el-button class="cancel-btn" @click="handleClose">取消</el-button>
+    </div>
+  </el-dialog>
 </template>
 
 <script>
@@ -53,30 +77,39 @@ import { mapActions } from 'vuex';
 export default {
   name: 'ChangePasswordDialog',
   props: {
-    value: {
+    visible: {
       type: Boolean,
       required: true
     }
   },
   data() {
     return {
-      dialogVisible: this.value,
+      dialogVisible: false,
       oldPassword: "",
       newPassword: "",
-      confirmNewPassword: ""
+      confirmNewPassword: "",
+      loading: false
     }
   },
   watch: {
-    value(val) {
-      this.dialogVisible = val;
+    visible: {
+      immediate: true,
+      handler(val) {
+        this.dialogVisible = val;
+      }
     },
     dialogVisible(val) {
-      this.$emit('input', val);
+      this.$emit('update:visible', val);
+      if (!val) {
+        this.resetForm();
+      }
     }
   },
   methods: {
-    ...mapActions(['logout']), // 引入Vuex的logout action
-    confirm() {
+    ...mapActions(['logout']),
+    async confirm() {
+      if (this.loading) return;
+      
       if (!this.oldPassword.trim() || !this.newPassword.trim() || !this.confirmNewPassword.trim()) {
         this.$message.error('请填写所有字段');
         return;
@@ -90,71 +123,180 @@ export default {
         return;
       }
 
-      // 修改后的接口调用
-      userApi.changePassword(this.oldPassword, this.newPassword, (res) => {
+      this.loading = true;
+      try {
+        const res = await new Promise((resolve, reject) => {
+          userApi.changePassword(this.oldPassword, this.newPassword, resolve, reject);
+        });
+
         if (res.data.code === 0) {
           this.$message.success({
             message: '密码修改成功，请重新登录',
             showClose: true
           });
-          this.logout().then(() => {
-            this.$router.push('/login');
-            this.$emit('update:visible', false);
-          });
+          this.handleClose();
+          await this.logout();
+          this.$router.push('/login');
         } else {
           this.$message.error(res.data.msg || '密码修改失败');
         }
-      }, (err) => {
+      } catch (err) {
         this.$message.error(err.msg || '密码修改失败');
-      });
-      this.$emit('input', false);
+      } finally {
+        this.loading = false;
+      }
     },
-    cancel() {
+    handleClose() {
       this.dialogVisible = false;
-      this.resetForm();
+      this.$emit('close');
     },
     resetForm() {
       this.oldPassword = "";
       this.newPassword = "";
       this.confirmNewPassword = "";
+      this.loading = false;
     }
   }
 }
 </script>
 
-<style scoped>
-.input-46 {
-  background: #f6f8fb;
-  border-radius: 15px;
+<style lang="scss" scoped>
+.change-password-dialog {
+  border-radius: 12px;
+  overflow: hidden;
+
+  ::v-deep .el-dialog__header {
+    display: none;
+  }
+
+  ::v-deep .el-dialog__body {
+    padding: 0;
+  }
 }
 
-.dialog-btn {
-  cursor: pointer;
-  flex: 1;
-  border-radius: 23px;
-  background: #5778ff;
-  height: 40px;
-  font-weight: 500;
-  font-size: 12px;
-  color: #fff;
-  line-height: 40px;
-  text-align: center;
+.dialog-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 20px 24px;
+  font-size: 18px;
+  font-weight: 600;
+  color: #333;
+
+  .header-icon {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    background: #ed1c24;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
+    img {
+      width: 20px;
+      height: 20px;
+      filter: brightness(0) invert(1);
+    }
+  }
 }
 
-::v-deep .el-dialog {
-  border-radius: 15px;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+.dialog-divider {
+  height: 1px;
+  background: #f0f0f0;
 }
 
-::v-deep .el-dialog__headerbtn {
-  display: none;
+.dialog-content {
+  padding: 24px;
 }
 
-::v-deep .el-dialog__body {
-  padding: 4px 6px;
+.form-group {
+  margin-bottom: 20px;
+
+  &:last-child {
+    margin-bottom: 0;
+  }
 }
 
-::v-deep .el-dialog__header {
-  padding: 10px;
+.form-label {
+  margin-bottom: 8px;
+  font-size: 14px;
+  color: #333;
+
+  .required {
+    color: #ed1c24;
+    margin-right: 4px;
+  }
+}
+
+.el-input {
+  ::v-deep .el-input__inner {
+    height: 40px;
+    line-height: 40px;
+    border-radius: 4px;
+    border-color: #ddd;
+    transition: all 0.3s;
+
+    &:focus {
+      border-color: #ed1c24;
+      box-shadow: 0 0 0 2px rgba(237, 28, 36, 0.1);
+    }
+  }
+}
+
+.dialog-footer {
+  padding: 16px 24px;
+  border-top: 1px solid #f0f0f0;
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
+}
+
+.confirm-btn {
+  min-width: 80px;
+  background-color: #ed1c24;
+  border-color: #ed1c24;
+  
+  &:hover, &:focus {
+    background-color: #c6121b;
+    border-color: #c6121b;
+  }
+
+  &.is-loading {
+    background-color: #ed1c24;
+    border-color: #ed1c24;
+    opacity: 0.8;
+  }
+}
+
+.cancel-btn {
+  min-width: 80px;
+  color: #666;
+  border-color: #ddd;
+  
+  &:hover, &:focus {
+    color: #ed1c24;
+    border-color: #ed1c24;
+    background-color: rgba(237, 28, 36, 0.1);
+  }
+}
+
+@media screen and (max-width: 768px) {
+  .change-password-dialog {
+    width: 90% !important;
+    margin: 15vh auto !important;
+  }
+
+  .dialog-header {
+    padding: 16px 20px;
+    font-size: 16px;
+  }
+
+  .dialog-content {
+    padding: 20px;
+  }
+
+  .dialog-footer {
+    padding: 12px 20px;
+  }
 }
 </style>

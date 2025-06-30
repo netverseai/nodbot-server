@@ -1,5 +1,5 @@
 <template>
-  <div class="welcome">
+  <div class="page-container">
     <HeaderBar />
 
     <div class="operation-bar">
@@ -11,10 +11,12 @@
         <div class="content-area">
           <el-card class="config-card" shadow="never">
             <div class="config-header">
-              <div class="header-icon">
-                <img loading="lazy" src="@/assets/home/setting-user.png" alt="">
+              <div class="header-left">
+                <div class="header-icon">
+                  <img loading="lazy" src="@/assets/home/setting-user.png" alt="">
+                </div>
+                <span class="header-title">{{ form.agentName }}</span>
               </div>
-              <span class="header-title">{{ form.agentName }}</span>
               <div class="header-actions">
                 <div class="hint-text">
                   <img loading="lazy" src="@/assets/home/info.png" alt="">
@@ -29,7 +31,7 @@
             </div>
             <div class="divider"></div>
 
-            <el-form ref="form" :model="form" label-width="72px">
+            <el-form ref="form" :model="form" label-position="top">
               <div class="form-content">
                 <div class="form-grid">
                   <div class="form-column">
@@ -53,14 +55,6 @@
                       <el-input type="textarea" rows="6" resize="none" v-model="form.summaryMemory" maxlength="2000"
                         show-word-limit class="form-textarea"
                         :disabled="form.model.memModelId !== 'Memory_mem_local_short'" />
-                    </el-form-item>
-                    <el-form-item label="语言编码：" style="display: none;">
-                      <el-input v-model="form.langCode" placeholder="请输入语言编码，如：zh_CN" maxlength="10" show-word-limit
-                        class="form-input" />
-                    </el-form-item>
-                    <el-form-item label="交互语种：" style="display: none;">
-                      <el-input v-model="form.language" placeholder="请输入交互语种，如：中文" maxlength="10" show-word-limit
-                        class="form-input" />
                     </el-form-item>
                   </div>
                   <div class="form-column">
@@ -489,126 +483,172 @@ export default {
 }
 </script>
 
-<style scoped>
-.welcome {
-  min-width: 900px;
-  height: 100vh;
-  display: flex;
-  position: relative;
-  flex-direction: column;
-  background: linear-gradient(to bottom right, #dce8ff, #e4eeff, #e6cbfd);
-  background-size: cover;
-  -webkit-background-size: cover;
-  -o-background-size: cover;
-  overflow: hidden;
+<style lang="scss" scoped>
+.page-container {
+  min-height: 100vh;
+  background: #f6f8fb;
+  padding-bottom: 40px;
 }
 
 .operation-bar {
+  padding: 20px 24px;
   display: flex;
-  justify-content: space-between;
   align-items: center;
-  padding: 1.5vh 24px;
+  justify-content: space-between;
+  background: #fff;
 }
 
 .page-title {
-  font-size: 24px;
+  font-size: 20px;
+  font-weight: 600;
+  color: #333;
   margin: 0;
-  color: #2c3e50;
 }
 
 .main-wrapper {
-  margin: 1vh 22px;
-  border-radius: 15px;
-  height: calc(100vh - 24vh);
-  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.1);
-  position: relative;
-  background: rgba(237, 242, 255, 0.5);
-  display: flex;
-  flex-direction: column;
+  padding: 24px;
 }
 
 .content-panel {
-  flex: 1;
-  display: flex;
+  background: #fff;
+  border-radius: 8px;
   overflow: hidden;
-  height: 100%;
-  border-radius: 15px;
-  background: transparent;
-  border: 1px solid #fff;
-}
-
-.content-area {
-  flex: 1;
-  height: 100%;
-  min-width: 600px;
-  overflow: auto;
-  background-color: white;
-  display: flex;
-  flex-direction: column;
 }
 
 .config-card {
-  background: white;
   border: none;
-  box-shadow: none;
-  display: flex;
-  flex-direction: column;
-  flex: 1;
-  overflow-y: auto;
+  box-shadow: none !important;
 }
 
 .config-header {
-  position: relative;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 16px 24px;
+  border-bottom: 1px solid #f0f0f0;
+}
+
+.header-left {
   display: flex;
   align-items: center;
-  gap: 13px;
-  padding: 0 0 5px 0;
-  font-weight: 700;
-  font-size: 19px;
-  color: #3d4566;
+  gap: 12px;
 }
 
 .header-icon {
-  width: 37px;
-  height: 37px;
-  background: #5778ff;
-  border-radius: 50%;
+  width: 32px;
+  height: 32px;
   display: flex;
   align-items: center;
   justify-content: center;
+  img {
+    width: 24px;
+    height: 24px;
+  }
 }
 
-.header-icon img {
-  width: 19px;
-  height: 19px;
+.header-title {
+  font-size: 16px;
+  font-weight: 600;
+  color: #333;
 }
 
-.divider {
-  height: 1px;
-  background: #e8f0ff;
+.header-actions {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.hint-text {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: #666;
+  font-size: 14px;
+  img {
+    width: 16px;
+    height: 16px;
+  }
+}
+
+.save-btn {
+  background-color: #ed1c24 !important;
+  border-color: #ed1c24 !important;
+  &:hover {
+    background-color: #c6121b !important;
+    border-color: #c6121b !important;
+  }
+}
+
+.reset-btn {
+  color: #ed1c24 !important;
+  border-color: #ed1c24 !important;
+  background: transparent !important;
+  &:hover {
+    color: #c6121b !important;
+    border-color: #c6121b !important;
+    background: rgba(237, 28, 36, 0.1) !important;
+  }
+}
+
+.custom-close-btn {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  border: 1px solid #ddd;
+  background: transparent;
+  color: #666;
+  font-size: 20px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.3s;
+  &:hover {
+    border-color: #ed1c24;
+    color: #ed1c24;
+  }
 }
 
 .form-content {
-  padding: 2vh 0;
+  padding: 24px;
 }
 
 .form-grid {
   display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 20px;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: 24px;
 }
 
 .form-column {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
+  min-width: 0;
+}
+
+.template-container {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+  gap: 12px;
+  margin-top: 8px;
+}
+
+.template-item {
+  padding: 8px 16px;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  cursor: pointer;
+  text-align: center;
+  transition: all 0.3s;
+  &:hover {
+    border-color: #ed1c24;
+    color: #ed1c24;
+  }
+}
+
+.template-loading {
+  opacity: 0.5;
+  pointer-events: none;
 }
 
 .form-input {
-  width: 100%;
-}
-
-.form-select {
   width: 100%;
 }
 
@@ -616,185 +656,85 @@ export default {
   width: 100%;
 }
 
-.template-container {
-  display: flex;
-  gap: 8px;
-  flex-wrap: wrap;
+.model-row {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 16px;
+  margin-bottom: 16px;
 }
 
-.template-item {
-  height: 4vh;
-  width: 76px;
-  border-radius: 8px;
-  background: #e6ebff;
-  line-height: 4vh;
-  font-weight: 400;
-  font-size: 11px;
-  text-align: center;
-  color: #5778ff;
-  cursor: pointer;
-  transition: background-color 0.3s ease;
-}
-
-.template-item:hover {
-  background-color: #d0d8ff;
+.model-item {
+  margin-bottom: 16px;
 }
 
 .model-select-wrapper {
-  display: flex;
-  align-items: center;
   width: 100%;
 }
 
-.model-row {
-  display: flex;
-  gap: 20px;
-  margin-bottom: 6px;
-}
-
-.model-row .model-item {
-  flex: 1;
-  margin-bottom: 0;
-}
-
-.model-row .el-form-item__label {
-  font-size: 12px !important;
-  color: #3d4566 !important;
-  font-weight: 400;
-  line-height: 22px;
-  padding-bottom: 2px;
+.form-select {
+  width: 100%;
 }
 
 .function-icons {
   display: flex;
-  align-items: center;
-  margin-left: auto;
-  padding-left: 10px;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 8px;
 }
 
 .icon-dot {
-  width: 25px;
-  height: 25px;
+  width: 24px;
+  height: 24px;
   border-radius: 50%;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  color: white;
-  font-weight: bold;
-  font-size: 12px;
-  margin-right: 8px;
-  position: relative;
-}
-
-::v-deep .el-form-item__label {
-  font-size: 12px !important;
-  color: #3d4566 !important;
-  font-weight: 400;
-  line-height: 22px;
-  padding-bottom: 2px;
-}
-
-::v-deep .el-textarea .el-input__count {
-  color: #909399;
-  background: none;
-  position: absolute;
-  font-size: 12px;
-  right: 3%;
-}
-
-.custom-close-btn {
-  position: absolute;
-  top: 25%;
-  right: 0;
-  transform: translateY(-50%);
-  width: 35px;
-  height: 35px;
-  border-radius: 50%;
-  border: 2px solid #cfcfcf;
-  background: none;
-  font-size: 30px;
-  font-weight: lighter;
-  color: #cfcfcf;
-  cursor: pointer;
   display: flex;
   align-items: center;
   justify-content: center;
-  z-index: 1;
-  padding: 0;
-  outline: none;
-}
-
-.custom-close-btn:hover {
-  color: #409EFF;
-  border-color: #409EFF;
+  color: white;
+  font-weight: 600;
+  font-size: 12px;
 }
 
 .edit-function-btn {
-  background: #e6ebff;
-  color: #5778ff;
-  border: 1px solid #adbdff;
-  border-radius: 18px;
-  padding: 10px 20px;
+  padding: 4px 12px;
+  border-radius: 4px;
+  border: 1px solid #ddd;
+  background: transparent;
+  color: #666;
+  cursor: pointer;
   transition: all 0.3s;
-}
-
-.edit-function-btn.active-btn {
-  background: #5778ff;
-  color: white;
+  &:hover, &.active-btn {
+    border-color: #ed1c24;
+    color: #ed1c24;
+  }
 }
 
 .chat-history-options {
-  display: flex;
-  gap: 10px;
-  min-width: 250px;
-  justify-content: flex-end;
+  margin-top: 8px;
 }
 
-.header-actions {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  margin-left: auto;
-}
+@media screen and (max-width: 768px) {
+  .config-header {
+    flex-direction: column;
+    gap: 16px;
+  }
 
-.header-actions .hint-text {
-  display: flex;
-  align-items: center;
-  gap: 4px;
-  color: #979db1;
-  font-size: 12px;
-  margin-right: 8px;
-}
+  .header-actions {
+    width: 100%;
+    flex-wrap: wrap;
+    justify-content: flex-end;
+  }
 
-.header-actions .hint-text img {
-  width: 16px;
-  height: 16px;
-}
+  .hint-text {
+    width: 100%;
+    justify-content: center;
+  }
 
-.header-actions .save-btn {
-  background: #5778ff;
-  color: white;
-  border: none;
-  border-radius: 18px;
-  padding: 8px 16px;
-  height: 32px;
-  font-size: 14px;
-}
+  .form-grid {
+    grid-template-columns: 1fr;
+  }
 
-.header-actions .reset-btn {
-  background: #e6ebff;
-  color: #5778ff;
-  border: 1px solid #adbdff;
-  border-radius: 18px;
-  padding: 8px 16px;
-  height: 32px;
-}
-
-.header-actions .custom-close-btn {
-  position: static;
-  transform: none;
-  width: 32px;
-  height: 32px;
-  margin-left: 8px;
+  .model-row {
+    grid-template-columns: 1fr;
+  }
 }
 </style>

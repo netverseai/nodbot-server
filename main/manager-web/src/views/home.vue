@@ -1,31 +1,31 @@
 <template>
-  <div class="welcome">
+  <div class="home-container">
     <!-- 公共头部 -->
     <HeaderBar :devices="devices" @search="handleSearch" @search-reset="handleSearchReset" />
-    <el-main style="padding: 20px;display: flex;flex-direction: column;">
+    <el-main class="home-main">
       <div>
         <!-- 首页内容 -->
         <div class="add-device">
           <div class="add-device-bg">
-            <div class="hellow-text" style="margin-top: 30px;">
-              你好，小智
-            </div>
-            <div class="hellow-text">
-              让我们度过
-              <div style="display: inline-block;color: #5778FF;">
-                美好的一天！
+            <div class="hello-text-container">
+              <div class="hello-text">
+                你好，Nodbot
+              </div>
+              <div class="hello-text">
+                让我们度过
+                <span style="color: #ed1c24;">美好的一天！</span>
+              </div>
+              <div class="hi-hint">
+                Hello, Let's have a wonderful day!
               </div>
             </div>
-            <div class="hi-hint">
-              Hello, Let's have a wonderful day!
-            </div>
-            <div class="add-device-btn">
-              <div class="left-add" @click="showAddDialog">
+            <div class="add-device-btn" @click="showAddDialog">
+              <div class="left-add">
                 添加智能体
               </div>
-              <div style="width: 23px;height: 13px;background: #5778ff;margin-left: -10px;" />
+              <div class="arrow-deco" />
               <div class="right-add">
-                <i class="el-icon-right" @click="showAddDialog" style="font-size: 20px;color: #fff;" />
+                <i class="el-icon-right" />
               </div>
             </div>
           </div>
@@ -49,7 +49,7 @@
       </div>
       <AddWisdomBodyDialog :visible.sync="addDeviceDialogVisible" @confirm="handleWisdomBodyAdded" />
     </el-main>
-    <el-footer>
+    <el-footer class="home-footer">
       <version-footer />
     </el-footer>
     <chat-history-dialog :visible.sync="showChatHistory" :agent-id="currentAgentId" :agent-name="currentAgentName" />
@@ -182,183 +182,230 @@ export default {
 }
 </script>
 
-<style scoped>
-.welcome {
-  min-width: 900px;
-  min-height: 506px;
-  height: 100vh;
+<style lang="scss" scoped>
+.home-container {
+  min-height: 100vh;
   display: flex;
   flex-direction: column;
-  background: linear-gradient(145deg, #e6eeff, #eff0ff);
-  background-size: cover;
-  /* 确保背景图像覆盖整个元素 */
-  background-position: center;
-  /* 从顶部中心对齐 */
-  -webkit-background-size: cover;
-  /* 兼容老版本WebKit浏览器 */
-  -o-background-size: cover;
-  /* 兼容老版本Opera浏览器 */
+  background: #f6f8fb;
+}
+
+.home-main {
+  padding: 24px;
+  display: flex;
+  flex-direction: column;
+  flex: 1;
 }
 
 .add-device {
-  height: 195px;
-  border-radius: 15px;
+  border-radius: 12px;
   position: relative;
   overflow: hidden;
-  background: linear-gradient(269.62deg,
-      #e0e6fd 0%,
-      #cce7ff 49.69%,
-      #d3d3fe 100%);
+  background: linear-gradient(145deg, #fdecec, #ff6b6b, #ed1c24);
+  background-size: 400% 400%;
+  animation: gradientBG 15s ease infinite;
+  margin-bottom: 24px;
+  box-shadow: 0 4px 12px rgba(237, 28, 36, 0.1);
+}
+
+@keyframes gradientBG {
+  0% {
+    background-position: 0% 50%;
+  }
+  50% {
+    background-position: 100% 50%;
+  }
+  100% {
+    background-position: 0% 50%;
+  }
 }
 
 .add-device-bg {
   width: 100%;
   height: 100%;
+  min-height: 200px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
   text-align: left;
   background-image: url("@/assets/home/main-top-bg.png");
-  overflow: hidden;
   background-size: cover;
-  /* 确保背景图像覆盖整个元素 */
   background-position: center;
-  /* 从顶部中心对齐 */
-  -webkit-background-size: cover;
-  /* 兼容老版本WebKit浏览器 */
-  -o-background-size: cover;
   box-sizing: border-box;
+  padding: 32px 40px;
+  position: relative;
+  z-index: 1;
 
-  /* 兼容老版本Opera浏览器 */
-  .hellow-text {
-    margin-left: 75px;
-    color: #3d4566;
-    font-size: 33px;
+  &::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: linear-gradient(90deg, rgba(255,255,255,0.9) 0%, rgba(255,255,255,0.8) 50%, rgba(255,255,255,0) 100%);
+    z-index: -1;
+  }
+
+  .hello-text-container {
+    color: #333;
+  }
+
+  .hello-text {
+    font-size: 36px;
     font-weight: 700;
-    letter-spacing: 0;
+    letter-spacing: -0.5px;
+    line-height: 1.2;
+    margin-bottom: 4px;
+
+    span {
+      color: #ed1c24;
+      position: relative;
+      
+      &::after {
+        content: '';
+        position: absolute;
+        bottom: 0;
+        left: 0;
+        width: 100%;
+        height: 4px;
+        background: rgba(237, 28, 36, 0.2);
+        border-radius: 2px;
+      }
+    }
   }
 
   .hi-hint {
     font-weight: 400;
-    font-size: 12px;
-    text-align: left;
-    color: #818cae;
-    margin-left: 75px;
-    margin-top: 5px;
+    font-size: 14px;
+    color: #666;
+    margin-top: 8px;
+    opacity: 0.8;
   }
 }
 
 .add-device-btn {
   display: flex;
   align-items: center;
-  margin-left: 75px;
-  margin-top: 15px;
   cursor: pointer;
+  background: #ed1c24;
+  border-radius: 8px;
+  flex-shrink: 0;
+  transition: all 0.3s;
+  overflow: hidden;
+
+  &:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(237, 28, 36, 0.2);
+    background: #c6121b;
+
+    .right-add {
+      background: rgba(0, 0, 0, 0.2);
+    }
+  }
 
   .left-add {
-    width: 105px;
-    height: 34px;
-    border-radius: 17px;
-    background: #5778ff;
-    color: #fff;
-    font-size: 14px;
+    padding: 12px 20px;
+    color: white;
     font-weight: 500;
-    text-align: center;
-    line-height: 34px;
+    font-size: 15px;
   }
 
   .right-add {
-    width: 34px;
-    height: 34px;
-    border-radius: 50%;
-    background: #5778ff;
-    margin-left: -6px;
+    width: 40px;
+    height: 40px;
     display: flex;
-    justify-content: center;
     align-items: center;
+    justify-content: center;
+    background: rgba(0, 0, 0, 0.1);
+    transition: all 0.3s;
+
+    i {
+      color: white;
+      font-size: 16px;
+    }
   }
 }
 
 .device-list-container {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
-  gap: 30px;
-  padding: 30px 0;
-}
-
-/* 在 DeviceItem.vue 的样式中 */
-.device-item {
-  margin: 0 !important;
-  /* 避免冲突 */
-  width: auto !important;
-}
-
-.footer {
-  font-size: 12px;
-  font-weight: 400;
-  margin-top: auto;
-  padding-top: 30px;
-  color: #979db1;
-  text-align: center;
-  /* 居中显示 */
-}
-
-/* 骨架屏动画 */
-@keyframes shimmer {
-  100% {
-    transform: translateX(100%);
-  }
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 24px;
+  padding: 4px;
 }
 
 .skeleton-item {
-  background: #fff;
-  border-radius: 8px;
+  background: white;
+  border-radius: 12px;
   padding: 20px;
-  height: 120px;
-  position: relative;
-  overflow: hidden;
-  margin-bottom: 20px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+  display: flex;
+  gap: 16px;
+  animation: pulse 1.5s infinite;
 }
 
 .skeleton-image {
   width: 80px;
   height: 80px;
-  background: #f0f2f5;
-  border-radius: 4px;
-  float: left;
-  position: relative;
-  overflow: hidden;
+  background: #f0f0f0;
+  border-radius: 8px;
+  flex-shrink: 0;
 }
 
 .skeleton-content {
-  margin-left: 100px;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 8px 0;
 }
 
 .skeleton-line {
   height: 16px;
-  background: #f0f2f5;
+  background: #f0f0f0;
   border-radius: 4px;
-  margin-bottom: 12px;
-  width: 70%;
-  position: relative;
-  overflow: hidden;
+  width: 100%;
 }
 
 .skeleton-line-short {
-  height: 12px;
-  background: #f0f2f5;
+  height: 16px;
+  background: #f0f0f0;
   border-radius: 4px;
-  width: 50%;
+  width: 60%;
 }
 
-.skeleton-item::after {
-  content: '';
-  position: absolute;
-  top: 0;
-  left: 0;
-  width: 50%;
-  height: 100%;
-  background: linear-gradient(90deg,
-      rgba(255, 255, 255, 0),
-      rgba(255, 255, 255, 0.3),
-      rgba(255, 255, 255, 0));
-  animation: shimmer 1.5s infinite;
+@keyframes pulse {
+  0% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.5;
+  }
+  100% {
+    opacity: 1;
+  }
+}
+
+@media screen and (max-width: 768px) {
+  .home-main {
+    padding: 16px;
+  }
+
+  .add-device-bg {
+    flex-direction: column;
+    gap: 24px;
+    text-align: center;
+    padding: 24px;
+    min-height: 160px;
+
+    .hello-text {
+      font-size: 28px;
+    }
+  }
+
+  .device-list-container {
+    grid-template-columns: 1fr;
+    gap: 16px;
+  }
 }
 </style>
