@@ -129,6 +129,7 @@ class ConnectionHandler:
 
         # tts相关变量
         self.sentence_id = None
+        self.use_tts = True  # 是否使用TTS语音通讯，默认为True
 
         # iot相关变量
         self.iot_descriptors = {}
@@ -600,6 +601,19 @@ class ConnectionHandler:
         # 更新系统prompt至上下文
         self.dialogue.update_system_message(self.prompt)
 
+    async def _send_ctx_message(self, text):
+        """发送CTX消息给终端，用于直接展示回复文字内容"""
+        try:
+            ctx_message = {
+                "session_id": self.session_id,
+                "type": "ctx",
+                "text": text
+            }
+            await self.websocket.send(json.dumps(ctx_message))
+            self.logger.bind(tag=TAG).debug(f"发送CTX消息: {text}")
+        except Exception as e:
+            self.logger.bind(tag=TAG).error(f"发送CTX消息失败: {e}")
+
     def chat(self, query, tool_call=False):
         self.logger.bind(tag=TAG).info(f"大模型收到用户消息: {query}")
         self.llm_finish_task = False
@@ -683,7 +697,11 @@ class ConnectionHandler:
             if content is not None and len(content) > 0:
                 if not tool_call_flag:
                     response_message.append(content)
-                    if text_index == 0:
+                    
+                    # 发送CTX消息给终端，无论use_tts是否为true
+                    asyncio.create_task(self._send_ctx_message(content))
+                    
+                    if text_index == 0 and getattr(self, 'use_tts', True):
                         self.tts.tts_text_queue.put(
                             TTSMessageDTO(
                                 sentence_id=self.sentence_id,
@@ -691,14 +709,15 @@ class ConnectionHandler:
                                 content_type=ContentType.ACTION,
                             )
                         )
-                    self.tts.tts_text_queue.put(
-                        TTSMessageDTO(
-                            sentence_id=self.sentence_id,
-                            sentence_type=SentenceType.MIDDLE,
-                            content_type=ContentType.TEXT,
-                            content_detail=content,
+                    if getattr(self, 'use_tts', True):
+                        self.tts.tts_text_queue.put(
+                            TTSMessageDTO(
+                                sentence_id=self.sentence_id,
+                                sentence_type=SentenceType.MIDDLE,
+                                content_type=ContentType.TEXT,
+                                content_detail=content,
+                            )
                         )
-                    )
                     text_index += 1
         # 处理function call
         if tool_call_flag:
@@ -790,11 +809,16 @@ class ConnectionHandler:
                 self._handle_function_result(result, function_call_data)
 
         # 存储对话内容
+        full_response = "".join(response_message)
         if len(response_message) > 0:
             self.dialogue.put(
-                Message(role="assistant", content="".join(response_message))
+                Message(role="assistant", content=full_response)
             )
-        if text_index > 0:
+            
+            # 发送完整的CTX消息
+            asyncio.create_task(self._send_ctx_message(full_response))
+            
+        if text_index > 0 and getattr(self, 'use_tts', True):
             self.tts.tts_text_queue.put(
                 TTSMessageDTO(
                     sentence_id=self.sentence_id,
