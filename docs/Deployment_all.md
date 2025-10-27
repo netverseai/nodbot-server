@@ -198,7 +198,7 @@ ws://你电脑局域网的ip:8000/xiaozhi/v1/
 ## 6. 升级服务端
 
 进入项目目录
-cd xiaozhi-server
+cd /opt/nodbot-server/
 
 拉取最新镜像
 docker compose -f docker-compose_all.yml pull
