@@ -33,6 +33,10 @@ async def handleTextMessage(conn, message):
                 conn.logger.bind(tag=TAG).debug(
                     f"客户端拾音模式：{conn.client_listen_mode}"
                 )
+            
+            # 每次listen消息都重新设置audio属性，无视state类型
+            conn.use_tts = msg_json.get("audio", True)
+            
             if msg_json["state"] == "start":
                 conn.client_have_voice = True
                 conn.client_voice_stop = False
@@ -68,12 +72,7 @@ async def handleTextMessage(conn, message):
                     else:
                         # 上报纯文字数据（复用ASR上报功能，但不提供音频数据）
                         enqueue_asr_report(conn, original_text, [])
-                        # 检查是否使用TTS语音通讯
-                        conn.use_tts = msg_json.get("audio", True)
-                        if not conn.use_tts:
-                            # 只回复文字消息，跳过TTS
-                            conn.client_is_speaking = False
-                        # 需要LLM对文字内容进行答复
+                        # 否则需要LLM对文字内容进行答复
                         await startToChat(conn, original_text)
         elif msg_json["type"] == "iot":
             conn.logger.bind(tag=TAG).info(f"收到iot消息：{message}")

@@ -604,13 +604,16 @@ class ConnectionHandler:
     async def _send_ctx_message(self, text):
         """发送CTX消息给终端，用于直接展示回复文字内容"""
         try:
+            if not text or not text.strip():
+                return
+                
             ctx_message = {
                 "session_id": self.session_id,
                 "type": "ctx",
-                "text": text
+                "text": text.strip()
             }
             await self.websocket.send(json.dumps(ctx_message))
-            self.logger.bind(tag=TAG).debug(f"发送CTX消息: {text}")
+            self.logger.bind(tag=TAG).info(f"发送CTX消息成功: {text[:100]}..." if len(text) > 100 else f"发送CTX消息成功: {text}")
         except Exception as e:
             self.logger.bind(tag=TAG).error(f"发送CTX消息失败: {e}")
 
@@ -697,9 +700,6 @@ class ConnectionHandler:
             if content is not None and len(content) > 0:
                 if not tool_call_flag:
                     response_message.append(content)
-                    
-                    # 发送CTX消息给终端，无论use_tts是否为true
-                    asyncio.create_task(self._send_ctx_message(content))
                     
                     if text_index == 0 and getattr(self, 'use_tts', True):
                         self.tts.tts_text_queue.put(
@@ -816,7 +816,16 @@ class ConnectionHandler:
             )
             
             # 发送完整的CTX消息
-            asyncio.create_task(self._send_ctx_message(full_response))
+            try:
+                task = asyncio.create_task(self._send_ctx_message(full_response))
+                # 保存任务引用防止被垃圾回收
+                if not hasattr(self, '_ctx_tasks'):
+                    self._ctx_tasks = []
+                self._ctx_tasks.append(task)
+                # 清理已完成的任务
+                self._ctx_tasks = [t for t in self._ctx_tasks if not t.done()]
+            except Exception as e:
+                self.logger.bind(tag=TAG).error(f"创建CTX消息任务失败: {e}")
             
         if text_index > 0 and getattr(self, 'use_tts', True):
             self.tts.tts_text_queue.put(
