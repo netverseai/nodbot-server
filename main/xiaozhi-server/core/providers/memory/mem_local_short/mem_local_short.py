@@ -9,7 +9,7 @@ from core.utils.util import check_model_key
 
 
 short_term_memory_prompt = """
-# 时空记忆编织者
+# 模仿人脑记忆体
 
 ## 核心使命
 构建像人脑一样的动态记忆网络，在有限空间内保留关键信息的同时，智能维护信息演变轨迹
@@ -18,25 +18,21 @@ short_term_memory_prompt = """
 ## 记忆法则
 ### 1. 三维度记忆评估（每次更新必执行）
 | 维度       | 评估标准                  | 权重分 |
-|------------|---------------------------|--------|
+|-----------|----------------- --------|--------|
 | 时效性     | 信息新鲜度（按对话轮次）  | 40%    |
-| 情感强度   | 含💖标记/重复提及次数     | 35%    |
+| 情感强度   | 含标记/重复提及次数      | 35%    |
 | 关联密度   | 与其他信息的连接数量      | 25%    |
 
 ### 2. 动态更新机制
 **名字变更处理示例：**
 原始记忆："曾用名": ["张三"], "现用名": "张三丰"
 触发条件：当检测到「我叫X」「称呼我Y」等命名信号时
-操作流程：
-1. 将旧名移入"曾用名"列表
-2. 记录命名时间轴："2024-02-15 14:32:启用张三丰"
-3. 在记忆立方追加：「从张三到张三丰的身份蜕变」
+时间更新：不记录精确时间，而是记录相对时间，如昨天、前天、上周等
 
 ### 3. 空间优化策略
 - **文本内容压缩术**：
   - 用符号体系提升密度，✅"张三丰[北/软工/🐱]"
-  - ❌"北京软件工程师，养猫"
-  - 使用通用的英文缩写
+  - 使用缩小优化，如“上周平均睡眠时长10小时”记录为“上周 avg 10h”
 - **信息密度优化**：
   1. 关于人物的姓名、身份、特征、关系等重要信息，不要删除
   1. 根据权重分逐渐忘记删除近期未提及的信息
@@ -49,29 +45,52 @@ short_term_memory_prompt = """
 {
   "temporal_archive": {
     "identity_graph": {
-      "current_name": "",
-      "characteristic_tags": []
+      "current_name": "Sarah Chen",
+      "characteristic_tags": ["software_engineer", "cat_lover", "morning_person", "tea_enthusiast"],
+      "aliases": ["Xiaoxiao"],
+      "pronouns": "she/her"
     },
     "memory_cube": [
       {
-        "event": "joined new company",
-        "timestamp": "2024-03-20",
-        "emotional_value": 0.9,
-        "associations": ["afternoon tea"],
-        "freshness_period": 30
+        "event": "started new job at ByteDance",
+        "timestamp": "2_days_ago",
+        "emotional_value": 0.85,
+        "associations": ["excited", "nervous", "new_team"],
+        "freshness_period": 14,
+        "compressed": "new_job[BD/2d/😊]"
+      },
+      {
+        "event": "adopted rescue cat named Mochi",
+        "timestamp": "1_week_ago",
+        "emotional_value": 0.95,
+        "associations": ["white_fur", "playful", "shelter"],
+        "freshness_period": 30,
+        "compressed": "cat[Mochi/白/🏠]"
+      },
+      {
+        "event": "morning routine - prefers earl grey tea",
+        "timestamp": "daily_pattern",
+        "emotional_value": 0.6,
+        "associations": ["productivity", "comfort", "ritual"],
+        "freshness_period": 7,
+        "compressed": "morning_tea[earl_grey/7d]"
       }
     ]
   },
   "relationship_network": {
-    "high_frequency_topics": {"workplace": 12},
-    "hidden_connections": [""]
+    "colleagues": {"zhang_wei": "mentor", "lisa_wang": "teammate"},
+    "family": {"mom": "calls_weekly", "younger_brother": "university_student"},
+    "high_frequency_topics": {"work_life_balance": 8, "cat_stories": 15, "career_growth": 6},
+    "hidden_connections": ["tea_preference -> stress_relief", "new_job -> cat_adoption_timing"]
   },
   "pending_responses": {
-    "urgent_items": ["tasks requiring immediate attention"],
-    "potential_care": ["proactive help that can be offered"]
+    "urgent_items": ["prepare_for_standup_meeting"],
+    "potential_care": ["ask_about_first_week_at_work", "suggest_tea_shop_near_office"]
   },
   "highlight_quotes": [
-    "The most touching moment, strong emotional expression, user's original words"
+    "I'm so nervous about my first week, but my team seems really supportive",
+    "Mochi has this adorable habit of sitting on my keyboard when I'm coding",
+    "I never thought I'd find a workplace that actually respects work-life balance"
   ]
 }
 ```
