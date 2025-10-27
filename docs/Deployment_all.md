@@ -195,6 +195,20 @@ ws://你电脑局域网的ip:8000/xiaozhi/v1/
 
 2、 [基于虾哥编译好的固件配置自定义服务器](firmware-setting.md)了。
 
+## 6. 升级服务端
+
+进入项目目录
+cd xiaozhi-server
+
+拉取最新镜像
+docker compose -f docker-compose_all.yml pull
+
+强制重建容器（使用最新镜像）
+docker compose -f docker-compose_all.yml up -d --force-recreate
+
+验证服务状态
+docker compose -f docker-compose_all.yml ps
+
 
 # 方式二：本地源码运行全模块
 
