@@ -601,7 +601,7 @@ class ConnectionHandler:
         # 更新系统prompt至上下文
         self.dialogue.update_system_message(self.prompt)
 
-    async def _send_ctx_message(self, text):
+    def _send_ctx_message_sync(self, text):
         """发送CTX消息给终端，用于直接展示回复文字内容"""
         try:
             if not text or not text.strip():
@@ -612,7 +612,11 @@ class ConnectionHandler:
                 "type": "ctx",
                 "text": text.strip()
             }
-            await self.websocket.send(json.dumps(ctx_message))
+            # 使用 asyncio.run_coroutine_threadsafe 在线程中同步发送
+            asyncio.run_coroutine_threadsafe(
+                self.websocket.send(json.dumps(ctx_message)), 
+                self.loop
+            ).result()
             self.logger.bind(tag=TAG).info(f"发送CTX消息成功: {text[:100]}..." if len(text) > 100 else f"发送CTX消息成功: {text}")
         except Exception as e:
             self.logger.bind(tag=TAG).error(f"发送CTX消息失败: {e}")
@@ -817,13 +821,8 @@ class ConnectionHandler:
             
             # 发送完整的CTX消息
             try:
-                task = asyncio.create_task(self._send_ctx_message(full_response))
-                # 保存任务引用防止被垃圾回收
-                if not hasattr(self, '_ctx_tasks'):
-                    self._ctx_tasks = []
-                self._ctx_tasks.append(task)
-                # 清理已完成的任务
-                self._ctx_tasks = [t for t in self._ctx_tasks if not t.done()]
+                # 直接使用同步方法发送CTX消息
+                self._send_ctx_message_sync(full_response)
             except Exception as e:
                 self.logger.bind(tag=TAG).error(f"创建CTX消息任务失败: {e}")
             
