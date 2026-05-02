@@ -1,384 +1,353 @@
 <template>
-  <div class="welcome">
-    <el-container class="auth-page-container">
-      <el-header class="auth-header">
-        <div class="logo-container">
-          <img loading="lazy" alt="logo" src="@/assets/xiaozhi-logo.png" class="logo-img" />
-          <img loading="lazy" alt="logo-text" src="@/assets/xiaozhi-ai.png" class="logo-text-img" />
+  <div class="disguised-page">
+    <!-- 极其隐蔽的右上角管理员入口 -->
+    <div class="console-trigger" @click="toggleLogin">
+      {{ showLoginForm ? '[ EXIT_CONSOLE ]' : 'SYSTEM_CONSOLE' }}
+    </div>
+
+    <transition name="fade-slide" mode="out-in">
+      <!-- 第一层：伪装 404 页面 (复古终端风格) -->
+      <div v-if="!showLoginForm" key="404" class="error-wrapper">
+        <pre class="ascii-logo">
+ ███╗   ██╗ ██████╗ ██████╗ ██████╗  ██████╗ ████████╗
+ ████╗  ██║██╔═══██╗██╔══██╗██╔══██╗██╔═══██╗╚══██╔══╝
+ ██╔██╗ ██║██║   ██║██║  ██║██████╔╝██║   ██║   ██║
+ ██║╚██╗██║██║   ██║██║  ██║██╔══██╗██║   ██║   ██║
+ ██║ ╚████║╚██████╔╝██████╔╝██████╔╝╚██████╔╝   ██║
+ ╚═╝  ╚═══╝ ╚═════╝ ╚═════╝ ╚═════╝  ╚═════╝    ╚═╝</pre>
+        <h1 class="error-code">404</h1>
+        <h2 class="error-title">HTTP_ERROR: RESOURCE_NOT_FOUND</h2>
+        <p class="error-message">
+          The requested system resource is unavailable.<br />
+          Your session ID and IP have been logged by the security subsystem.
+        </p>
+        <div class="action-bar">
+          <div class="terminal-btn" @click="goOuterSpace">> DISCONNECT_SESSION</div>
         </div>
-      </el-header>
-      <el-main class="auth-main">
-        <div class="auth-container">
-          <div class="login-person">
-            <img loading="lazy" alt="" src="@/assets/login/login-person.png" style="width: 100%;" />
+      </div>
+
+      <!-- 第二层：隐藏的终端登录（无注册、无协议、无隐私链接） -->
+      <div v-else key="login" class="login-wrapper">
+        <div class="terminal-card" @keyup.enter="login">
+          <div class="terminal-header">
+            <span class="status-dot"></span>
+            <span class="terminal-title">ADMINISTRATOR AUTHENTICATION</span>
           </div>
-          <div class="login-box" @keyup.enter="login">
-            <div class="login-header">
-              <img loading="lazy" alt="" src="@/assets/login/hi.png" class="hi-img" />
-              <div class="login-text">登录</div>
-              <div class="login-welcome">
-                WELCOME TO LOGIN
-              </div>
+
+          <el-form :model="form" ref="loginForm" class="terminal-form">
+            <!-- 标识符 -->
+            <div class="input-row">
+              <span class="prompt">ID_</span>
+              <el-input
+                v-model="form.username"
+                placeholder="Enter Identifier"
+                spellcheck="false"
+                autocomplete="off"
+              />
             </div>
-            <div class="login-form-container">
-              <el-form :model="form" ref="loginForm" class="login-form">
-                <!-- 用户名登录 -->
-                <template v-if="!isMobileLogin">
-                  <el-form-item prop="username">
-                    <div class="input-box">
-                      <img loading="lazy" alt="" class="input-icon" src="@/assets/login/username.png" />
-                      <el-input v-model="form.username" placeholder="请输入用户名" />
-                    </div>
-                  </el-form-item>
-                </template>
 
-                <!-- 手机号登录 -->
-                <template v-else>
-                  <el-form-item prop="mobile">
-                    <div class="input-box">
-                      <el-row :gutter="10" style="width: 100%">
-                        <el-col :xs="12" :sm="10">
-                          <el-select v-model="form.areaCode">
-                            <el-option v-for="item in mobileAreaList" :key="item.key"
-                              :label="`${item.name} (${item.key})`" :value="item.key" />
-                          </el-select>
-                        </el-col>
-                        <el-col :xs="12" :sm="14">
-                          <el-input v-model="form.mobile" placeholder="请输入手机号码" />
-                        </el-col>
-                      </el-row>
-                    </div>
-                  </el-form-item>
-                </template>
-
-                <el-form-item prop="password">
-                  <div class="input-box">
-                    <img loading="lazy" alt="" class="input-icon" src="@/assets/login/password.png" />
-                    <el-input v-model="form.password" placeholder="请输入密码" type="password" />
-                  </div>
-                </el-form-item>
-
-                <el-form-item prop="captcha">
-                  <el-row :gutter="10" type="flex" align="middle">
-                    <el-col :span="14">
-                      <div class="input-box" style="margin-top: 0;">
-                        <img loading="lazy" alt="" class="input-icon" src="@/assets/login/shield.png" />
-                        <el-input v-model="form.captcha" placeholder="请输入验证码" />
-                      </div>
-                    </el-col>
-                    <el-col :span="10">
-                      <img v-if="captchaUrl" :src="captchaUrl" alt="验证码" class="captcha-img" @click="fetchCaptcha" />
-                    </el-col>
-                  </el-row>
-                </el-form-item>
-
-                <el-form-item>
-                  <div class="form-actions">
-                    <div v-if="allowUserRegister" class="link-btn" @click="goToRegister">新用户注册</div>
-                    <div class="link-btn" @click="goToForgetPassword" v-if="enableMobileRegister">忘记密码?</div>
-                  </div>
-                </el-form-item>
-
-                <el-form-item>
-                  <div class="login-btn" @click="login">登录</div>
-                </el-form-item>
-              </el-form>
-
-              <!-- 登录方式切换按钮 -->
-              <div class="login-type-container" v-if="enableMobileRegister">
-                <el-tooltip content="手机号码登录" placement="bottom">
-                  <el-button :type="isMobileLogin ? 'primary' : 'default'" icon="el-icon-mobile" circle
-                    @click="switchLoginType('mobile')"></el-button>
-                </el-tooltip>
-                <el-tooltip content="用户名登录" placement="bottom">
-                  <el-button :type="!isMobileLogin ? 'primary' : 'default'" icon="el-icon-user" circle
-                    @click="switchLoginType('username')"></el-button>
-                </el-tooltip>
-              </div>
-
-              <div class="terms-text">
-                登录即同意
-                <span class="link-btn">《用户协议》</span>
-                和
-                <span class="link-btn">《隐私政策》</span>
-              </div>
+            <!-- 凭证 -->
+            <div class="input-row">
+              <span class="prompt">PW_</span>
+              <el-input
+                v-model="form.password"
+                type="password"
+                placeholder="Enter Credential"
+                show-password
+              />
             </div>
-          </div>
+
+            <!-- 安全令牌 (验证码) -->
+            <el-row :gutter="10" type="flex" align="middle" class="captcha-row">
+              <el-col :span="14">
+                <div class="input-row">
+                  <span class="prompt">TK_</span>
+                  <el-input v-model="form.captcha" placeholder="Token" autocomplete="off" />
+                </div>
+              </el-col>
+              <el-col :span="10">
+                <img v-if="captchaUrl" :src="captchaUrl" class="terminal-captcha" @click="fetchCaptcha" />
+              </el-col>
+            </el-row>
+
+            <div class="execute-btn" @click="login">
+              > EXECUTE_LOGIN_SEQUENCE
+            </div>
+          </el-form>
         </div>
-      </el-main>
-      <el-footer class="auth-footer">
-        <version-footer />
-      </el-footer>
-    </el-container>
+      </div>
+    </transition>
+
+    <div class="footer-note">
+      ESTABLISHING SECURE CONNECTION... [{{ currentIp || 'LOGGED' }}]
+    </div>
   </div>
 </template>
 
 <script>
 import Api from '@/apis/api';
-import VersionFooter from '@/components/VersionFooter.vue';
-import { getUUID, goToPage, showDanger, showSuccess, validateMobile } from '@/utils';
-import { mapState } from 'vuex';
+import { getUUID, goToPage, showDanger, showSuccess } from '@/utils';
 
 export default {
   name: 'login',
-  components: {
-    VersionFooter
-  },
-  computed: {
-    ...mapState({
-      allowUserRegister: state => state.pubConfig.allowUserRegister,
-      enableMobileRegister: state => state.pubConfig.enableMobileRegister,
-      mobileAreaList: state => state.pubConfig.mobileAreaList
-    })
-  },
   data() {
     return {
-      activeName: "username",
+      showLoginForm: false,
+      currentIp: '',
       form: {
         username: '',
         password: '',
         captcha: '',
-        captchaId: '',
-        areaCode: '+86',
-        mobile: ''
+        captchaId: ''
       },
       captchaUuid: '',
-      captchaUrl: '',
-      isMobileLogin: false
-    }
+      captchaUrl: ''
+    };
   },
   mounted() {
     this.fetchCaptcha();
-    this.$store.dispatch('fetchPubConfig').then(() => {
-      // 根据配置决定默认登录方式
-      this.isMobileLogin = this.enableMobileRegister;
-    });
+    // 模拟随机IP增加伪装真实感
+    this.currentIp = Array.from({length: 4}, () => Math.floor(Math.random() * 256)).join('.');
   },
   methods: {
+    toggleLogin() {
+      this.showLoginForm = !this.showLoginForm;
+      if (this.showLoginForm) {
+        this.fetchCaptcha();
+      }
+    },
     fetchCaptcha() {
       if (this.$store.getters.getToken) {
-        if (this.$route.path !== '/home') {
-          this.$router.push('/home')
-        }
+        goToPage('/home');
       } else {
         this.captchaUuid = getUUID();
-
         Api.user.getCaptcha(this.captchaUuid, (res) => {
           if (res.status === 200) {
             const blob = new Blob([res.data], { type: res.data.type });
             this.captchaUrl = URL.createObjectURL(blob);
-          } else {
-            showDanger('验证码加载失败，点击刷新');
           }
         });
       }
     },
-
-    // 切换登录方式
-    switchLoginType(type) {
-      this.isMobileLogin = type === 'mobile';
-      // 清空表单
-      this.form.username = '';
-      this.form.mobile = '';
-      this.form.password = '';
-      this.form.captcha = '';
-      this.fetchCaptcha();
-    },
-
-    // 封装输入验证逻辑
-    validateInput(input, message) {
-      if (!input.trim()) {
-        showDanger(message);
-        return false;
-      }
-      return true;
-    },
-
     async login() {
-      if (this.isMobileLogin) {
-        // 手机号登录验证
-        if (!validateMobile(this.form.mobile, this.form.areaCode)) {
-          showDanger('请输入正确的手机号码');
-          return;
-        }
-        // 拼接手机号作为用户名
-        this.form.username = this.form.areaCode + this.form.mobile;
-      } else {
-        // 用户名登录验证
-        if (!this.validateInput(this.form.username, '用户名不能为空')) {
-          return;
-        }
-      }
-
-      // 验证密码
-      if (!this.validateInput(this.form.password, '密码不能为空')) {
+      if (!this.form.username || !this.form.password || !this.form.captcha) {
+        showDanger('REQUIRED_FIELDS_MISSING');
         return;
       }
-      // 验证验证码
-      if (!this.validateInput(this.form.captcha, '验证码不能为空')) {
-        return;
-      }
-
-      this.form.captchaId = this.captchaUuid
+      this.form.captchaId = this.captchaUuid;
       Api.user.login(this.form, ({ data }) => {
-        showSuccess('登录成功！');
+        showSuccess('AUTHENTICATION_GRANTED');
         this.$store.commit('setToken', JSON.stringify(data.data));
         goToPage('/home');
       }, (err) => {
-        showDanger(err.data.msg || '登录失败')
-        if (err.data != null && err.data.msg != null && err.data.msg.indexOf('图形验证码') > -1) {
-          this.fetchCaptcha()
-        }
-      })
-
-      // 重新获取验证码
-      setTimeout(() => {
+        showDanger(err.data?.msg || 'ACCESS_DENIED');
         this.fetchCaptcha();
-      }, 1000);
+      });
     },
-
-    goToRegister() {
-      goToPage('/register')
-    },
-    goToForgetPassword() {
-      goToPage('/retrieve-password')
-    },
+    goOuterSpace() {
+      window.location.href = "https://www.google.com";
+    }
   }
-}
+};
 </script>
+
 <style lang="scss" scoped>
-@import './auth.scss';
-
-.auth-page-container {
+.disguised-page {
   height: 100vh;
-}
-
-.auth-header {
-  height: auto;
-  padding: 15px 20px;
-}
-
-.logo-container {
+  width: 100vw;
+  background-color: #050505;
+  color: #444;
+  font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
   display: flex;
-  align-items: center;
-  gap: 10px;
-}
-
-.logo-img {
-  width: 45px;
-  height: 45px;
-}
-
-.logo-text-img {
-  height: 18px;
-}
-
-.auth-main {
-  display: flex;
+  flex-direction: column;
   align-items: center;
   justify-content: center;
+  position: relative;
+  overflow: hidden;
 }
 
-.login-header {
-  display: flex;
-  align-items: center;
-  gap: 20px;
-  margin-bottom: 30px;
-  padding: 0 30px;
-}
-
-.hi-img {
-  width: 34px;
-  height: 34px;
-}
-
-.login-form-container {
-  padding: 0 30px;
-}
-
-.captcha-img {
-  width: 100%;
-  height: 40px;
+.console-trigger {
+  position: absolute;
+  top: 15px;
+  right: 20px;
+  font-size: 10px;
+  color: #111;
   cursor: pointer;
-  border-radius: 8px;
-}
-
-.form-actions {
-  display: flex;
-  justify-content: space-between;
-  width: 100%;
-  font-size: 14px;
-}
-
-.link-btn {
-  color: #5778ff;
-  cursor: pointer;
-  transition: color 0.3s;
-}
-
-.link-btn:hover {
-  color: #4a6ae8;
-}
-
-.login-btn {
-  width: 100%;
-  margin: 0;
-}
-
-.login-type-container {
-  text-align: center;
-  margin: 20px 0;
-}
-
-.terms-text {
-  font-size: 14px;
-  color: #979db1;
-  text-align: center;
-}
-
-.auth-footer {
-  height: auto;
-}
-
-:deep(.el-button--primary) {
-  background-color: #5778ff;
-  border-color: #5778ff;
-
-  &:hover,
-  &:focus {
-    background-color: #4a6ae8;
-    border-color: #4a6ae8;
-  }
-
-  &:active {
-    background-color: #3d5cd6;
-    border-color: #3d5cd6;
+  z-index: 1000;
+  transition: color 0.5s;
+  &:hover {
+    color: #333;
   }
 }
 
-:deep(.el-form-item) {
-  margin-bottom: 20px;
-}
+.error-wrapper {
+  text-align: center;
+  animation: flicker 3s infinite;
 
-:deep(.el-input-group__append),
-:deep(.el-input-group__prepend) {
-  background-color: #f6f8fb;
-  border: 1px solid #e4e6ef;
-}
-
-:deep(.el-select .el-input__inner) {
-  padding: 0 10px;
-}
-
-@media (max-width: 480px) {
-  .login-header {
-    padding: 0 15px;
-    gap: 10px;
+  .ascii-logo {
+    display: inline-block;
+    text-align: left;
+    color: #004400; /* 复古暗绿色 */
+    font-size: 12px;
+    line-height: 1.2;
     margin-bottom: 20px;
+    font-family: 'Consolas', 'Courier New', monospace;
+    text-shadow: 0 0 5px rgba(0, 80, 0, 0.4);
   }
 
-  .login-form-container {
-    padding: 0 15px;
+  .error-code {
+    font-size: 80px;
+    margin: 10px 0;
+    color: #0a0a0a; /* 极深色，隐约可见 */
+    font-weight: 100;
+    letter-spacing: 20px;
   }
+
+  .error-title {
+    color: #1a1a1a;
+    letter-spacing: 4px;
+    font-size: 14px;
+    margin-bottom: 30px;
+  }
+
+  .error-message {
+    font-size: 12px;
+    color: #222;
+    line-height: 2;
+    margin-bottom: 40px;
+  }
+
+  .terminal-btn {
+    display: inline-block;
+    border: 1px solid #1a1a1a;
+    padding: 10px 30px;
+    font-size: 12px;
+    cursor: pointer;
+    transition: all 0.3s;
+    &:hover {
+      background: #111;
+      color: #00ff00;
+      border-color: #004400;
+    }
+  }
+}
+
+.login-wrapper {
+  width: 100%;
+  max-width: 400px;
+  padding: 20px;
+}
+
+.terminal-card {
+  background: #0d0d0d;
+  border: 1px solid #1a1a1a;
+  box-shadow: 0 0 40px rgba(0, 255, 0, 0.03);
+
+  .terminal-header {
+    background: #151515;
+    padding: 10px 15px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+
+    .status-dot {
+      width: 8px;
+      height: 8px;
+      background: #00ff00;
+      border-radius: 50%;
+      box-shadow: 0 0 5px #00ff00;
+    }
+
+    .terminal-title {
+      font-size: 10px;
+      color: #666;
+      letter-spacing: 1px;
+    }
+  }
+}
+
+.terminal-form {
+  padding: 30px;
+
+  .input-row {
+    display: flex;
+    align-items: center;
+    border-bottom: 1px solid #1a1a1a;
+    margin-bottom: 25px;
+
+    .prompt {
+      color: #00ff00;
+      margin-right: 10px;
+      font-weight: bold;
+    }
+
+    :deep(.el-input__inner) {
+      background: transparent !important;
+      border: none !important;
+      color: #00ff00 !important;
+      font-family: inherit;
+      padding-left: 0;
+      &::placeholder { color: #222; }
+    }
+
+    /* 移除自动填充时的背景色 */
+    :deep(.el-input__inner:-webkit-autofill) {
+      -webkit-box-shadow: 0 0 0px 1000px #0d0d0d inset !important;
+      -webkit-text-fill-color: #00ff00 !important;
+    }
+  }
+}
+
+.terminal-captcha {
+  width: 100%;
+  height: 32px;
+  filter: grayscale(1) contrast(150%) invert(1);
+  cursor: pointer;
+  opacity: 0.5;
+  &:hover { opacity: 0.8; }
+}
+
+.execute-btn {
+  margin-top: 10px;
+  border: 1px dashed #00ff00;
+  color: #00ff00;
+  text-align: center;
+  padding: 12px;
+  font-size: 12px;
+  cursor: pointer;
+  transition: all 0.3s;
+  &:hover {
+    background: rgba(0, 255, 0, 0.05);
+    box-shadow: 0 0 15px rgba(0, 255, 0, 0.1);
+  }
+}
+
+.footer-note {
+  position: absolute;
+  bottom: 20px;
+  font-size: 9px;
+  color: #1a1a1a;
+  letter-spacing: 2px;
+}
+
+@keyframes flicker {
+  0% { opacity: 0.98; }
+  5% { opacity: 0.95; }
+  10% { opacity: 0.9; }
+  50% { opacity: 1; }
+  90% { opacity: 0.95; }
+  100% { opacity: 1; }
+}
+
+.fade-slide-enter-active, .fade-slide-leave-active {
+  transition: all 0.4s ease;
+}
+.fade-slide-enter-from {
+  opacity: 0;
+  transform: scale(0.98);
+}
+.fade-slide-leave-to {
+  opacity: 0;
+  transform: scale(1.02);
 }
 </style>
