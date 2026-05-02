@@ -274,6 +274,18 @@ This flow primarily relies on HTTP/HTTPS-based RESTful API for request-response 
 
 This multi-protocol communication strategy ensures that different types of interaction requirements within the system can be handled efficiently and appropriately, balancing real-time performance and standardized request-response patterns.
 
+### 4.4. Remote MCP Control (Web/API to Device)
+
+The system supports triggering MCP tools on connected ESP32 devices via HTTP API. This allows Web Applications to control hardware (e.g., volume, lights) through the server.
+
+*   **Endpoint**: `POST /api/mcp/call`
+*   **Workflow**:
+    1.  **Web App** sends an HTTP POST request to `xiaozhi-server`.
+    2.  **`xiaozhi-server`** identifies the active WebSocket connection for the given `device_id`.
+    3.  **`xiaozhi-server`** wraps the request into an MCP JSON-RPC call and sends it over WebSocket to the **ESP32**.
+    4.  **ESP32** executes the local tool and returns the result.
+    5.  **`xiaozhi-server`** responds to the HTTP request with the device's output.
+
 ---
 
 ## 5. Key Features Summary

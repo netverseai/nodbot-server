@@ -3,16 +3,18 @@ from aiohttp import web
 from config.logger import setup_logging
 from core.api.ota_handler import OTAHandler
 from core.api.vision_handler import VisionHandler
+from core.api.mcp_proxy_handler import McpProxyHandler
 
 TAG = __name__
 
 
 class SimpleHttpServer:
-    def __init__(self, config: dict):
+    def __init__(self, config: dict, ws_server):
         self.config = config
         self.logger = setup_logging()
         self.ota_handler = OTAHandler(config)
         self.vision_handler = VisionHandler(config)
+        self.mcp_proxy = McpProxyHandler(ws_server)
 
     def _get_websocket_url(self, local_ip: str, port: int) -> str:
         """获取websocket地址
@@ -57,6 +59,9 @@ class SimpleHttpServer:
                     web.get("/mcp/vision/explain", self.vision_handler.handle_get),
                     web.post("/mcp/vision/explain", self.vision_handler.handle_post),
                     web.options("/mcp/vision/explain", self.vision_handler.handle_post),
+                    web.get("/api/mcp/tools", self.mcp_proxy.handle_get_tools),
+                    web.post("/api/mcp/call", self.mcp_proxy.handle_call),
+                    web.post("/api/mcp/chat", self.mcp_proxy.handle_chat),
                 ]
             )
 

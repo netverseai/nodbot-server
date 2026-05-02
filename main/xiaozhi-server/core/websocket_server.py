@@ -32,6 +32,13 @@ class WebSocketServer:
 
         self.active_connections = set()
 
+    def get_connection_by_device_id(self, device_id: str):
+        """根据 device_id 查找活动连接"""
+        for handler in self.active_connections:
+            if handler.device_id == device_id:
+                return handler
+        return None
+
     async def start(self):
         server_config = self.config["server"]
         host = server_config.get("ip", "0.0.0.0")

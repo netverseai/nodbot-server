@@ -1,4 +1,4 @@
 # nodbot-server
 nodbot-esp32-server
 
-V1.0
+V1.3.0
