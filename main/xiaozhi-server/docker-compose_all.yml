@@ -51,6 +51,7 @@ services:
       - SPRING_DATASOURCE_DRUID_PASSWORD=123456
       - SPRING_DATA_REDIS_HOST=nodbot-redis
       - SPRING_DATA_REDIS_PORT=6379
+      - XIAOZHI_SERVER_URL=http://nodbot-server:8003
     volumes:
       # 配置文件目录
       - ./uploadfile:/uploadfile

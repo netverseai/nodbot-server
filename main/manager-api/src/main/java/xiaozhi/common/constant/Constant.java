@@ -97,6 +97,11 @@ public interface Constant {
     String SERVER_OTA = "server.ota";
 
     /**
+     * xiaozhi-server http地址
+     */
+    String SERVER_XIAOZHI_URL = "server.xiaozhi_url";
+
+    /**
      * 是否允许用户注册
      */
     String SERVER_ALLOW_USER_REGISTER = "server.allow_user_register";
