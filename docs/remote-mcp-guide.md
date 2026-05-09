@@ -22,6 +22,7 @@
 ### 请求示例
 ```http
 GET http://your-api-domain:8002/device/mcp/tools/ESP32_01
+Authorization: Bearer your_token_here
 ```
 
 ### 返回示例
