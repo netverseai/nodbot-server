@@ -55,4 +55,5 @@ public interface ErrorCode {
 
     int OTA_DEVICE_NOT_FOUND = 10041;
     int OTA_DEVICE_NEED_BIND = 10042;
+    int DEVICE_NOT_EXIST = 10043;
 }
