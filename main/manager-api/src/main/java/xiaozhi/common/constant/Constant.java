@@ -107,6 +107,11 @@ public interface Constant {
     String SERVER_ALLOW_USER_REGISTER = "server.allow_user_register";
 
     /**
+     * token过期时间（天）
+     */
+    String SERVER_TOKEN_EXPIRE = "server.token_expire";
+
+    /**
      * 下发六位验证码时显示的控制面板地址
      */
     String SERVER_FRONTED_URL = "server.fronted_url";

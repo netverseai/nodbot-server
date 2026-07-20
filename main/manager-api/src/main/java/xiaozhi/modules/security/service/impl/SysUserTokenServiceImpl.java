@@ -2,10 +2,12 @@ package xiaozhi.modules.security.service.impl;
 
 import java.util.Date;
 
+import org.apache.commons.lang3.StringUtils;
 import org.springframework.stereotype.Service;
 
 import cn.hutool.core.date.DateUtil;
 import lombok.AllArgsConstructor;
+import xiaozhi.common.constant.Constant;
 import xiaozhi.common.exception.ErrorCode;
 import xiaozhi.common.exception.RenException;
 import xiaozhi.common.page.TokenDTO;
@@ -18,6 +20,7 @@ import xiaozhi.modules.security.oauth2.TokenGenerator;
 import xiaozhi.modules.security.service.SysUserTokenService;
 import xiaozhi.modules.sys.dto.PasswordDTO;
 import xiaozhi.modules.sys.dto.SysUserDTO;
+import xiaozhi.modules.sys.service.SysParamsService;
 import xiaozhi.modules.sys.service.SysUserService;
 
 @AllArgsConstructor
@@ -26,20 +29,26 @@ public class SysUserTokenServiceImpl extends BaseServiceImpl<SysUserTokenDao, Sy
         implements SysUserTokenService {
 
     private final SysUserService sysUserService;
-    /**
-     * 12小时后过期
-     */
-    private final static int EXPIRE = 3600 * 12;
+    private final SysParamsService sysParamsService;
 
     @Override
     public Result<TokenDTO> createToken(Long userId) {
         // 用户token
         String token;
 
+        // 获取过期时间（天），默认30天
+        String expireDaysStr = sysParamsService.getValue(Constant.SERVER_TOKEN_EXPIRE, true);
+        int expireDays = 30;
+        if (StringUtils.isNotBlank(expireDaysStr)) {
+            expireDays = Integer.parseInt(expireDaysStr);
+        }
+        // 转换为秒
+        int expireSeconds = expireDays * 24 * 3600;
+
         // 当前时间
         Date now = new Date();
         // 过期时间
-        Date expireTime = new Date(now.getTime() + EXPIRE * 1000);
+        Date expireTime = new Date(now.getTime() + (long) expireSeconds * 1000);
 
         // 判断是否生成过token
         SysUserTokenEntity tokenEntity = baseDao.getByUserId(userId);
@@ -76,7 +85,7 @@ public class SysUserTokenServiceImpl extends BaseServiceImpl<SysUserTokenDao, Sy
 
         TokenDTO tokenDTO = new TokenDTO();
         tokenDTO.setToken(token);
-        tokenDTO.setExpire(EXPIRE);
+        tokenDTO.setExpire(expireSeconds);
         tokenDTO.setClientHash(clientHash);
         return new Result<TokenDTO>().ok(tokenDTO);
     }
