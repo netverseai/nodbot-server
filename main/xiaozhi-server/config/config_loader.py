@@ -1,6 +1,7 @@
 import os
 import argparse
 import yaml
+import json
 from collections.abc import Mapping
 from config.manage_api_client import init_service, get_server_config, get_agent_models
 
@@ -50,9 +51,21 @@ def get_config_from_api(config):
     init_service(config)
 
     # 获取服务器配置
-    config_data = get_server_config()
+    try:
+        config_data = get_server_config()
+        if config_data:
+            # 成功获取，保存到本地缓存
+            save_config_to_cache(config_data)
+        else:
+            # 如果API返回None，尝试从本地缓存加载
+            print("API返回配置为空，尝试从本地缓存加载...")
+            config_data = load_config_from_cache()
+    except Exception as e:
+        print(f"从API获取配置失败: {e}，尝试从本地缓存加载...")
+        config_data = load_config_from_cache()
+
     if config_data is None:
-        raise Exception("Failed to fetch server config from API")
+        raise Exception("Failed to fetch server config from API and no local cache available")
 
     config_data["read_config_from_api"] = True
     config_data["manager-api"] = {
@@ -69,6 +82,29 @@ def get_config_from_api(config):
             "auth_key": config["server"].get("auth_key", ""),
         }
     return config_data
+
+
+def save_config_to_cache(config_data):
+    """将配置保存到本地缓存文件"""
+    cache_path = os.path.join(get_project_dir(), "data/config_cache.json")
+    try:
+        os.makedirs(os.path.dirname(cache_path), exist_ok=True)
+        with open(cache_path, "w", encoding="utf-8") as f:
+            json.dump(config_data, f, ensure_ascii=False, indent=4)
+    except Exception as e:
+        print(f"保存配置缓存失败: {e}")
+
+
+def load_config_from_cache():
+    """从本地缓存文件加载配置"""
+    cache_path = os.path.join(get_project_dir(), "data/config_cache.json")
+    if os.path.exists(cache_path):
+        try:
+            with open(cache_path, "r", encoding="utf-8") as f:
+                return json.load(f)
+        except Exception as e:
+            print(f"读取配置缓存失败: {e}")
+    return None
 
 
 def get_private_config_from_api(config, device_id, client_id):
