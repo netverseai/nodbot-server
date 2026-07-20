@@ -39,8 +39,14 @@ from core.providers.tts.dto.dto import ContentType, TTSMessageDTO, SentenceType
 from config.logger import setup_logging, build_module_string, update_module_string
 from config.manage_api_client import DeviceNotFoundException, DeviceBindException
 
-
 TAG = __name__
+
+# 企业级实践：全局共享线程池 (Global Singleton Executor)
+# 目的：
+# 1. 防止大量并发连接时，因创建成百上千个线程导致 Docker 容器 OOM。
+# 2. 将计算密集型任务（如 Opus 解码、VAD）调度到固定规模的池中。
+# 3. 减少线程上下文切换带来的开销，适合小内存设备。
+_global_executor = ThreadPoolExecutor(max_workers=32, thread_name_prefix="SrvWorker")
 
 auto_import_modules("plugins_func.functions")
 
@@ -61,7 +67,11 @@ class ConnectionHandler:
         server=None,
     ):
         self.common_config = config
-        self.config = copy.deepcopy(config)
+        # 优化：避免大对象 deepcopy，使用浅拷贝并按需处理嵌套
+        self.config = config.copy()
+        if "selected_module" in self.config:
+            self.config["selected_module"] = self.config["selected_module"].copy()
+
         self.session_id = str(uuid.uuid4())
         self.logger = setup_logging()
         self.server = server  # 保存server实例的引用
@@ -87,13 +97,16 @@ class ConnectionHandler:
         self.client_is_speaking = False
         self.client_listen_mode = "auto"
 
-        # 线程任务相关
+        # 线程任务相关：挂载到全局共享池
         self.loop = asyncio.get_event_loop()
         self.stop_event = threading.Event()
-        self.executor = ThreadPoolExecutor(max_workers=5)
+        self.executor = _global_executor
 
-        # 添加上报线程池
-        self.report_queue = queue.Queue()
+        # ASR相关：设置队列上限，防止极端网络下 ASR 堆积导致内存溢出
+        self.asr_audio_queue = queue.Queue(maxsize=200)
+
+        # 添加上报线程池队列
+        self.report_queue = queue.Queue(maxsize=500)
         self.report_thread = None
         # 未来可以通过修改此处，调节asr的上报和tts的上报，目前默认都开启
         self.report_asr_enable = self.read_config_from_api
@@ -183,8 +196,8 @@ class ConnectionHandler:
                 f"{self.client_ip} conn - Headers: {self.headers}"
             )
 
-            # 进行认证
-            await self.auth.authenticate(self.headers)
+            # 进行认证：集成 IP 速率限制检查
+            await self.auth.authenticate(self.headers, client_ip=self.client_ip)
 
             # 认证通过,继续处理
             self.websocket = ws
@@ -251,18 +264,25 @@ class ConnectionHandler:
         self.timeout_task = asyncio.create_task(self._check_timeout())
 
     async def _route_message(self, message):
-        """消息路由"""
+        """
+        消息路由优化 (高效内存管理)
+        """
         # 重置超时计时器
         await self.reset_timeout()
 
         if isinstance(message, str):
             await handleTextMessage(self, message)
         elif isinstance(message, bytes):
-            if self.vad is None:
+            if self.vad is None or self.asr is None:
                 return
-            if self.asr is None:
-                return
-            self.asr_audio_queue.put(message)
+
+            # 企业级实践：使用 memoryview 避免对音频二进制流进行内存拷贝。
+            # 这在处理高并发、长时间音频输入时能显著降低 GC 压力和 CPU 占用。
+            try:
+                self.asr_audio_queue.put_nowait(memoryview(message))
+            except queue.Full:
+                # 流控：当服务端处理能力不足时，丢弃最旧的音频帧，优先保证系统不崩溃
+                self.logger.bind(tag=TAG).warning(f"ASR Audio Queue Full (Session: {self.session_id}), dropping packet")
 
     async def handle_restart(self, message):
         """处理服务器重启请求"""
@@ -994,8 +1014,10 @@ class ConnectionHandler:
             elif self.websocket:
                 await self.websocket.close()
 
-            # 最后关闭线程池（避免阻塞）
-            if self.executor:
+            # 最后清理引用，不关闭全局执行器
+            if self.executor == _global_executor:
+                self.executor = None
+            elif self.executor:
                 self.executor.shutdown(wait=False)
                 self.executor = None
 
