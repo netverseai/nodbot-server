@@ -56,7 +56,7 @@ class AuthMiddleware:
 
         # 4. JWT 验证逻辑
         if not auth_header.startswith("Bearer "):
-            raise AuthenticationError("Missing Authorization header (Bearer token required)")
+            raise AuthenticationError("MISSING AUTH HEADER")
 
         token = auth_header.split(" ")[1]
         try:
@@ -64,9 +64,9 @@ class AuthMiddleware:
             payload = jwt.decode(token, self.secret, algorithms=["HS256"])
             if payload.get("sub") != device_id:
                 logger.bind(tag=TAG).warning(f"Token sub mismatch: {payload.get('sub')} != {device_id}")
-                raise AuthenticationError("Token device mismatch")
+                raise AuthenticationError("DEVICE MISMATCH")
         except jwt.ExpiredSignatureError:
-            raise AuthenticationError("Token signature has expired")
+            raise AuthenticationError("TOKEN EXPIRED")
         except jwt.InvalidTokenError as e:
             raise AuthenticationError(f"Invalid token: {str(e)}")
 
@@ -85,7 +85,7 @@ class AuthMiddleware:
 
             if len(attempts) >= self.max_requests_per_window:
                 logger.bind(tag=TAG).warning(f"Rate limit exceeded for IP: {ip} ({len(attempts)} attempts in {self.window_seconds}s)")
-                raise AuthenticationError("Too many connection attempts, please try later")
+                raise AuthenticationError("TOO MANY REQUESTS")
 
             attempts.append(now)
             self.connection_history[ip] = attempts

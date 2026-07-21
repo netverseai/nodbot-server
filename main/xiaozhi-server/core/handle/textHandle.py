@@ -104,7 +104,7 @@ async def handleTextMessage(conn, message):
                         {
                             "type": "server",
                             "status": "error",
-                            "message": "服务器密钥验证失败",
+                            "message": "AUTH FAILED",
                         }
                     )
                 )
@@ -119,7 +119,7 @@ async def handleTextMessage(conn, message):
                                 {
                                     "type": "server",
                                     "status": "error",
-                                    "message": "无法获取服务器实例",
+                                    "message": "SERVER ERROR",
                                     "content": {"action": "update_config"},
                                 }
                             )
@@ -132,7 +132,7 @@ async def handleTextMessage(conn, message):
                                 {
                                     "type": "server",
                                     "status": "error",
-                                    "message": "更新服务器配置失败",
+                                    "message": "CONFIG UPDATE FAILED",
                                     "content": {"action": "update_config"},
                                 }
                             )
@@ -145,7 +145,7 @@ async def handleTextMessage(conn, message):
                             {
                                 "type": "server",
                                 "status": "success",
-                                "message": "配置更新成功",
+                                "message": "CONFIG UPDATED",
                                 "content": {"action": "update_config"},
                             }
                         )
@@ -157,7 +157,7 @@ async def handleTextMessage(conn, message):
                             {
                                 "type": "server",
                                 "status": "error",
-                                "message": f"更新配置失败: {str(e)}",
+                                "message": f"CONFIG UPDATE FAILED: {str(e)}",
                                 "content": {"action": "update_config"},
                             }
                         )

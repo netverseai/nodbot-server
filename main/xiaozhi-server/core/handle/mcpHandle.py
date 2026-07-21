@@ -284,10 +284,10 @@ async def call_mcp_tool(
     调用指定的工具，并等待响应
     """
     if not await mcp_client.is_ready():
-        raise RuntimeError("MCP客户端尚未准备就绪")
+        raise RuntimeError("MCP NOT READY")
 
     if not mcp_client.has_tool(tool_name):
-        raise ValueError(f"工具 {tool_name} 不存在")
+        raise ValueError(f"TOOL NOT FOUND: {tool_name}")
 
     tool_call_id = await mcp_client.get_next_id()
     result_future = asyncio.Future()
@@ -323,26 +323,26 @@ async def call_mcp_tool(
                             if merged_dict:
                                 arguments = merged_dict
                             else:
-                                raise ValueError(f"无法解析任何有效的JSON对象: {args}")
+                                raise ValueError(f"PARSE ERROR: {args}")
                         else:
-                            raise ValueError(f"参数JSON解析失败: {args}")
+                            raise ValueError(f"PARSE ERROR: {args}")
                     except Exception as e:
                         conn.logger.bind(tag=TAG).error(
                             f"参数JSON解析失败: {str(e)}, 原始参数: {args}"
                         )
-                        raise ValueError(f"参数JSON解析失败: {str(e)}")
+                        raise ValueError(f"PARSE ERROR: {str(e)}")
         elif isinstance(args, dict):
             arguments = args
         else:
-            raise ValueError(f"参数类型错误，期望字符串或字典，实际类型: {type(args)}")
+            raise ValueError(f"ARGUMENT TYPE ERROR: {type(args)}")
 
         # 确保参数是字典类型
         if not isinstance(arguments, dict):
-            raise ValueError(f"参数必须是字典类型，实际类型: {type(arguments)}")
+            raise ValueError(f"ARGUMENT TYPE ERROR: {type(arguments)}")
 
     except Exception as e:
         if not isinstance(e, ValueError):
-            raise ValueError(f"参数处理失败: {str(e)}")
+            raise ValueError(f"PARSE ERROR: {str(e)}")
         raise e
 
     actual_name = mcp_client.name_mapping.get(tool_name, tool_name)
@@ -368,9 +368,9 @@ async def call_mcp_tool(
         if isinstance(raw_result, dict):
             if raw_result.get("isError") is True:
                 error_msg = raw_result.get(
-                    "error", "工具调用返回错误，但未提供具体错误信息"
+                    "error", "TOOL ERROR"
                 )
-                raise RuntimeError(f"工具调用错误: {error_msg}")
+                raise RuntimeError(f"TOOL ERROR: {error_msg}")
 
             content = raw_result.get("content")
             if isinstance(content, list) and len(content) > 0:
@@ -381,7 +381,7 @@ async def call_mcp_tool(
         return str(raw_result)
     except asyncio.TimeoutError:
         await mcp_client.cleanup_call_result(tool_call_id)
-        raise TimeoutError("工具调用请求超时")
+        raise TimeoutError("TOOL TIMEOUT")
     except Exception as e:
         await mcp_client.cleanup_call_result(tool_call_id)
         raise e

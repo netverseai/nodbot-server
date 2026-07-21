@@ -187,7 +187,7 @@ class ConnectionHandler:
                     self.headers["device-id"] = query_params["device-id"][0]
                     self.headers["client-id"] = query_params["client-id"][0]
                 else:
-                    await ws.send("端口正常，如需测试连接，请使用test_page.html")
+                    await ws.send("SERVICE READY")
                     await self.close(ws)
                     return
             # 获取客户端ip地址
@@ -293,7 +293,7 @@ class ConnectionHandler:
                     {
                         "type": "server",
                         "status": "success",
-                        "message": "服务器重启中...",
+                        "message": "SERVER RESTARTING",
                         "content": {"action": "restart"},
                     }
                 )
@@ -323,7 +323,7 @@ class ConnectionHandler:
                     {
                         "type": "server",
                         "status": "error",
-                        "message": f"Restart failed: {str(e)}",
+                        "message": f"RESTART FAILED: {str(e)}",
                         "content": {"action": "restart"},
                     }
                 )
@@ -820,7 +820,7 @@ class ConnectionHandler:
                     except Exception as e:
                         self.logger.bind(tag=TAG).error(f"MCP工具调用失败: {e}")
                         result = ActionResponse(
-                            action=Action.REQLLM, result="MCP工具调用失败", response=""
+                            action=Action.REQLLM, result=f"TOOL ERROR: {e}", response=""
                         )
                 else:
                     # 处理系统函数
@@ -871,7 +871,7 @@ class ConnectionHandler:
                         f"无法解析 function_arguments: {function_arguments}"
                     )
                     return ActionResponse(
-                        action=Action.REQLLM, result="参数解析失败", response=""
+                        action=Action.REQLLM, result="PARSE ERROR", response=""
                     )
 
             tool_result = asyncio.run_coroutine_threadsafe(
@@ -895,10 +895,10 @@ class ConnectionHandler:
         except Exception as e:
             self.logger.bind(tag=TAG).error(f"MCP工具调用错误: {e}")
             return ActionResponse(
-                action=Action.REQLLM, result="工具调用出错", response=""
+                action=Action.REQLLM, result=f"TOOL ERROR: {e}", response=""
             )
 
-        return ActionResponse(action=Action.REQLLM, result="工具调用出错", response="")
+        return ActionResponse(action=Action.REQLLM, result="TOOL ERROR", response="")
 
     def _handle_function_result(self, result, function_call_data):
         if result.action == Action.RESPONSE:  # 直接回复前端
