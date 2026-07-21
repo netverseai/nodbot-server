@@ -232,29 +232,26 @@ class ConnectionHandler:
             await self._save_and_close(ws)
 
     async def _save_and_close(self, ws):
-        """保存记忆并关闭连接"""
+        """
+        优雅关闭连接并异步保存对话状态
+        """
         try:
-            if self.memory:
-                # 使用线程池异步保存记忆
-                def save_memory_task():
+            if self.memory and self.dialogue.dialogue:
+                # 优化：使用全局执行器而非创建新线程，降低资源抖动
+                def save_memory_job():
                     try:
-                        # 创建新事件循环（避免与主循环冲突）
                         loop = asyncio.new_event_loop()
                         asyncio.set_event_loop(loop)
-                        loop.run_until_complete(
-                            self.memory.save_memory(self.dialogue.dialogue)
-                        )
-                    except Exception as e:
-                        self.logger.bind(tag=TAG).error(f"保存记忆失败: {e}")
-                    finally:
+                        loop.run_until_complete(self.memory.save_memory(self.dialogue.dialogue))
                         loop.close()
+                    except Exception as e:
+                        self.logger.bind(tag=TAG).error(f"Memory persistence error: {e}")
 
-                # 启动线程保存记忆，不等待完成
-                threading.Thread(target=save_memory_task, daemon=True).start()
+                if self.executor:
+                    self.executor.submit(save_memory_job)
         except Exception as e:
-            self.logger.bind(tag=TAG).error(f"保存记忆失败: {e}")
+            self.logger.bind(tag=TAG).error(f"Post-connection cleanup failed: {e}")
         finally:
-            # 立即关闭连接，不等待记忆保存完成
             await self.close(ws)
 
     async def reset_timeout(self):
@@ -276,10 +273,10 @@ class ConnectionHandler:
             if self.vad is None or self.asr is None:
                 return
 
-            # 企业级实践：使用 memoryview 避免对音频二进制流进行内存拷贝。
-            # 这在处理高并发、长时间音频输入时能显著降低 GC 压力和 CPU 占用。
+            # 企业级实践：保持消息原始 bytes 类型，以确保与底层 C 扩展库（如 opuslib）的兼容性。
+            # 只有在进行大规模数据处理或内存极致优化且库支持的情况下才使用 memoryview。
             try:
-                self.asr_audio_queue.put_nowait(memoryview(message))
+                self.asr_audio_queue.put_nowait(message)
             except queue.Full:
                 # 流控：当服务端处理能力不足时，丢弃最旧的音频帧，优先保证系统不崩溃
                 self.logger.bind(tag=TAG).warning(f"ASR Audio Queue Full (Session: {self.session_id}), dropping packet")
