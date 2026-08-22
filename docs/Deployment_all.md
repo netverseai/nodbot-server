@@ -200,6 +200,11 @@ ws://你电脑局域网的ip:8000/xiaozhi/v1/
 进入项目目录
 cd /opt/nodbot-server/
 
+*确保 可用空间 ≥ 5GB，否则拉取大镜像会失败
+df -h /var/lib/docker
+清理无用 Docker 资源（释放空间，不影响运行容器）
+docker system prune -a -f
+
 拉取最新镜像
 docker compose -f docker-compose_all.yml pull
 
@@ -208,7 +213,12 @@ docker compose -f docker-compose_all.yml up -d --force-recreate
 
 验证服务状态
 docker compose -f docker-compose_all.yml ps
+docker compose -f docker-compose_all.yml logs --tail=50
 
+*回滚方案（如果升级失败）
+docker images | grep nodbot
+修改 docker-compose_all.yml 中的 image 标签为旧版本
+docker compose -f docker-compose_all.yml up -d
 
 # 方式二：本地源码运行全模块
 
