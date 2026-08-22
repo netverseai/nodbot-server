@@ -59,7 +59,7 @@ public class McpController {
             Object response = restTemplate.getForObject(url, Object.class);
             return new Result<>().ok(response);
         } catch (Exception e) {
-            return new Result<>().error("设备不在线或连接失败: " + e.getMessage());
+            return new Result<>().error(ErrorCode.DEVICE_NOT_ONLINE_OR_FAILED);
         }
     }
 
@@ -82,7 +82,7 @@ public class McpController {
             Object response = restTemplate.postForObject(url, params, Object.class);
             return new Result<>().ok(response);
         } catch (Exception e) {
-            return new Result<>().error("指令发送失败: " + e.getMessage());
+            return new Result<>().error(ErrorCode.MCP_COMMAND_SEND_FAILED);
         }
     }
 
@@ -105,7 +105,7 @@ public class McpController {
             Object response = restTemplate.postForObject(url, params, Object.class);
             return new Result<>().ok(response);
         } catch (Exception e) {
-            return new Result<>().error("对话发送失败: " + e.getMessage());
+            return new Result<>().error(ErrorCode.MCP_DIALOGUE_SEND_FAILED);
         }
     }
 
@@ -116,12 +116,12 @@ public class McpController {
         }
 
         if (device == null) {
-            return new Result<DeviceEntity>().error(ErrorCode.DEVICE_NOT_EXIST, "设备不存在");
+            return new Result<DeviceEntity>().error(ErrorCode.DEVICE_NOT_EXIST);
         }
 
         UserDetail user = SecurityUser.getUser();
         if (!device.getUserId().equals(user.getId())) {
-            return new Result<DeviceEntity>().error(ErrorCode.FORBIDDEN, "无权操作该设备");
+            return new Result<DeviceEntity>().error(ErrorCode.DEVICE_PERMISSION_DENIED);
         }
 
         return new Result<DeviceEntity>().ok(device);

@@ -28,6 +28,7 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.AllArgsConstructor;
 import xiaozhi.common.constant.Constant;
+import xiaozhi.common.exception.ErrorCode;
 import xiaozhi.common.page.PageData;
 import xiaozhi.common.redis.RedisKeys;
 import xiaozhi.common.redis.RedisUtils;
@@ -174,7 +175,7 @@ public class AgentController {
 
         // 检查权限
         if (!agentService.checkAgentPermission(id, user.getId())) {
-            return new Result<List<AgentChatHistoryDTO>>().error("没有权限查看该智能体的聊天记录");
+            return new Result<List<AgentChatHistoryDTO>>().error(ErrorCode.AGENT_CHAT_HISTORY_FORBIDDEN);
         }
 
         // 查询聊天记录
@@ -188,7 +189,7 @@ public class AgentController {
     public Result<String> getAudioId(@PathVariable("audioId") String audioId) {
         byte[] audioData = agentChatAudioService.getAudio(audioId);
         if (audioData == null) {
-            return new Result<String>().error("音频不存在");
+            return new Result<String>().error(ErrorCode.AGENT_AUDIO_NOT_EXIST);
         }
         String uuid = UUID.randomUUID().toString();
         redisUtils.set(RedisKeys.getAgentAudioIdKey(uuid), audioId);

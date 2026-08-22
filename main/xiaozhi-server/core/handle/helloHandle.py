@@ -78,7 +78,7 @@ async def checkWakeupWords(conn, text):
             "voice": "default",
             "file_path": "config/assets/wakeup_words.wav",
             "time": 0,
-            "text": "哈啰啊，我是小智啦，声音好听的台湾女孩一枚，超开心认识你耶，最近在忙啥，别忘了给我来点有趣的料哦，我超爱听八卦的啦",
+            "text": "Hello! I am really happy to meet you! What have you been up to lately? Feel free to share something interesting with me.",
         }
 
     # 播放唤醒词回复

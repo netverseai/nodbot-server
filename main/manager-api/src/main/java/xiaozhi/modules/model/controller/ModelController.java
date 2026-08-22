@@ -16,6 +16,7 @@ import org.springframework.web.bind.annotation.RestController;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.AllArgsConstructor;
+import xiaozhi.common.exception.ErrorCode;
 import xiaozhi.common.page.PageData;
 import xiaozhi.common.utils.ConvertUtils;
 import xiaozhi.common.utils.Result;
@@ -118,7 +119,7 @@ public class ModelController {
     public Result<Void> enableModelConfig(@PathVariable String id, @PathVariable Integer status) {
         ModelConfigEntity entity = modelConfigService.selectById(id);
         if (entity == null) {
-            return new Result<Void>().error("模型配置不存在");
+            return new Result<Void>().error(ErrorCode.MODEL_CONFIG_NOT_EXIST);
         }
         entity.setIsEnabled(status);
         modelConfigService.updateById(entity);
@@ -131,7 +132,7 @@ public class ModelController {
     public Result<Void> setDefaultModel(@PathVariable String id) {
         ModelConfigEntity entity = modelConfigService.selectById(id);
         if (entity == null) {
-            return new Result<Void>().error("模型配置不存在");
+            return new Result<Void>().error(ErrorCode.MODEL_CONFIG_NOT_EXIST);
         }
         // 将其他模型设置为非默认
         modelConfigService.setDefaultModel(entity.getModelType(), 0);

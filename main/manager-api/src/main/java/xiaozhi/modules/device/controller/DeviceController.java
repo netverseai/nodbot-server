@@ -51,7 +51,7 @@ public class DeviceController {
     public Result<String> registerDevice(@RequestBody DeviceRegisterDTO deviceRegisterDTO) {
         String macAddress = deviceRegisterDTO.getMacAddress();
         if (StringUtils.isBlank(macAddress)) {
-            return new Result<String>().error(ErrorCode.NOT_NULL, "mac地址不能为空");
+            return new Result<String>().error(ErrorCode.MAC_ADDRESS_NOT_EMPTY);
         }
         // 生成六位验证码
         String code = String.valueOf(Math.random()).substring(2, 8);
@@ -89,11 +89,11 @@ public class DeviceController {
     public Result<Void> updateDeviceInfo(@PathVariable String id, @Valid @RequestBody DeviceUpdateDTO deviceUpdateDTO) {
         DeviceEntity entity = deviceService.selectById(id);
         if (entity == null) {
-            return new Result<Void>().error("设备不存在");
+            return new Result<Void>().error(ErrorCode.DEVICE_NOT_EXIST);
         }
         UserDetail user = SecurityUser.getUser();
         if (!entity.getUserId().equals(user.getId())) {
-            return new Result<Void>().error("设备不存在");
+            return new Result<Void>().error(ErrorCode.DEVICE_NOT_EXIST);
         }
         BeanUtils.copyProperties(deviceUpdateDTO, entity);
         deviceService.updateById(entity);

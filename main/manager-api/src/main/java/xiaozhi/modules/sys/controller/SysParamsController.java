@@ -24,6 +24,7 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.AllArgsConstructor;
 import xiaozhi.common.annotation.LogOperation;
 import xiaozhi.common.constant.Constant;
+import xiaozhi.common.exception.ErrorCode;
 import xiaozhi.common.exception.RenException;
 import xiaozhi.common.page.PageData;
 import xiaozhi.common.utils.Result;
@@ -121,23 +122,23 @@ public class SysParamsController {
         }
         String[] wsUrls = urls.split("\\;");
         if (wsUrls.length == 0) {
-            throw new RenException("WebSocket地址列表不能为空");
+            throw new RenException(ErrorCode.CONFIG_WEBSOCKET_LIST_EMPTY);
         }
         for (String url : wsUrls) {
             if (StringUtils.isNotBlank(url)) {
                 // 检查是否包含localhost或127.0.0.1
                 if (url.contains("localhost") || url.contains("127.0.0.1")) {
-                    throw new RenException("WebSocket地址不能使用localhost或127.0.0.1");
+                    throw new RenException(ErrorCode.CONFIG_WEBSOCKET_LOCALHOST_FORBIDDEN);
                 }
 
                 // 验证WebSocket地址格式
                 if (!WebSocketValidator.validateUrlFormat(url)) {
-                    throw new RenException("WebSocket地址格式不正确: " + url);
+                    throw new RenException(ErrorCode.CONFIG_WEBSOCKET_FORMAT_INVALID);
                 }
 
                 // 测试WebSocket连接
                 if (!WebSocketValidator.testConnection(url)) {
-                    throw new RenException("WebSocket连接测试失败: " + url);
+                    throw new RenException(ErrorCode.CONFIG_WEBSOCKET_TEST_FAILED);
                 }
             }
         }
@@ -164,35 +165,35 @@ public class SysParamsController {
             return;
         }
         if (StringUtils.isBlank(url) || url.equals("null")) {
-            throw new RenException("OTA地址不能为空");
+            throw new RenException(ErrorCode.CONFIG_OTA_URL_EMPTY);
         }
 
         // 检查是否包含localhost或127.0.0.1
         if (url.contains("localhost") || url.contains("127.0.0.1")) {
-            throw new RenException("OTA地址不能使用localhost或127.0.0.1");
+            throw new RenException(ErrorCode.CONFIG_OTA_LOCALHOST_FORBIDDEN);
         }
 
         // 验证URL格式
         if (!url.toLowerCase().startsWith("http")) {
-            throw new RenException("OTA地址必须以http或https开头");
+            throw new RenException(ErrorCode.CONFIG_OTA_PROTOCOL_INVALID);
         }
         if (!url.endsWith("/ota/")) {
-            throw new RenException("OTA地址必须以/ota/结尾");
+            throw new RenException(ErrorCode.CONFIG_OTA_PATH_INVALID);
         }
 
         try {
             // 发送GET请求
             ResponseEntity<String> response = restTemplate.getForEntity(url, String.class);
             if (response.getStatusCode() != HttpStatus.OK) {
-                throw new RenException("OTA接口访问失败，状态码：" + response.getStatusCode());
+                throw new RenException(ErrorCode.CONFIG_OTA_TEST_FAILED);
             }
             // 检查响应内容是否包含OTA相关信息
             String body = response.getBody();
             if (body == null || !body.contains("OTA")) {
-                throw new RenException("OTA接口返回内容格式不正确，可能不是一个真实的OTA接口");
+                throw new RenException(ErrorCode.CONFIG_OTA_FORMAT_INVALID);
             }
         } catch (Exception e) {
-            throw new RenException("OTA接口验证失败：" + e.getMessage());
+            throw new RenException(ErrorCode.CONFIG_OTA_VALIDATE_FAILED);
         }
     }
 }

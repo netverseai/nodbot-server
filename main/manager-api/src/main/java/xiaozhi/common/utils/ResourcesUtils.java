@@ -5,6 +5,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.core.io.ResourceLoader;
 import org.springframework.core.io.Resource;
 import org.springframework.stereotype.Component;
+import xiaozhi.common.exception.ErrorCode;
 import xiaozhi.common.exception.RenException;
 
 
@@ -37,7 +38,7 @@ public class ResourcesUtils {
             }
         }  catch (IOException e){
             log.error("方法：loadString()读取资源失败--{}",e.getMessage());
-            throw new RenException("读取资源失败");
+            throw new RenException(ErrorCode.RESOURCE_READ_FAILED);
         }
         return luaScriptBuilder.toString();
     }

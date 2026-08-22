@@ -6,6 +6,7 @@ import time
 import asyncio
 from core.handle.sendAudioHandle import SentenceType
 from core.utils.util import audio_to_data
+from core.utils.error_code import ErrorCode, get_error_message
 
 TAG = __name__
 
@@ -93,7 +94,7 @@ async def no_voice_close_connect(conn, have_voice):
 
 
 async def max_out_size(conn):
-    text = "不好意思，我现在有点事情要忙，明天这个时候我们再聊，约好了哦！明天不见不散，拜拜！"
+    text = get_error_message(ErrorCode.OUTPUT_LIMIT_REACHED)
     await send_stt_message(conn, text)
     file_path = "config/assets/max_output_size.wav"
     opus_packets, _ = audio_to_data(file_path)
@@ -106,11 +107,11 @@ async def check_bind_device(conn):
         # 确保bind_code是6位数字
         if len(conn.bind_code) != 6:
             conn.logger.bind(tag=TAG).error(f"无效的绑定码格式: {conn.bind_code}")
-            text = "绑定码格式错误，请检查配置。"
+            text = get_error_message(ErrorCode.BIND_CODE_FORMAT_INVALID)
             await send_stt_message(conn, text)
             return
 
-        text = f"请登录控制面板，输入{conn.bind_code}，绑定设备。"
+        text = get_error_message(ErrorCode.DEVICE_BIND_REQUIRED).format(code=conn.bind_code)
         await send_stt_message(conn, text)
 
         # 播放提示音
@@ -130,7 +131,7 @@ async def check_bind_device(conn):
                 continue
         conn.tts.tts_audio_queue.put((SentenceType.LAST, [], None))
     else:
-        text = f"没有找到该设备的版本信息，请正确配置 OTA地址，然后重新编译固件。"
+        text = get_error_message(ErrorCode.DEVICE_VERSION_NOT_FOUND)
         await send_stt_message(conn, text)
         music_path = "config/assets/bind_not_found.wav"
         opus_packets, _ = audio_to_data(music_path)

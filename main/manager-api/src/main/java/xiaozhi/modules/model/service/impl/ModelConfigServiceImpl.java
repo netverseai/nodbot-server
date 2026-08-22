@@ -14,6 +14,7 @@ import com.baomidou.mybatisplus.core.metadata.IPage;
 import cn.hutool.core.collection.CollectionUtil;
 import lombok.AllArgsConstructor;
 import xiaozhi.common.constant.Constant;
+import xiaozhi.common.exception.ErrorCode;
 import xiaozhi.common.exception.RenException;
 import xiaozhi.common.page.PageData;
 import xiaozhi.common.redis.RedisKeys;
@@ -69,11 +70,11 @@ public class ModelConfigServiceImpl extends BaseServiceImpl<ModelConfigDao, Mode
     public ModelConfigDTO add(String modelType, String provideCode, ModelConfigBodyDTO modelConfigBodyDTO) {
         // 先验证有没有供应器
         if (StringUtils.isBlank(modelType) || StringUtils.isBlank(provideCode)) {
-            throw new RenException("modelType和provideCode不能为空");
+            throw new RenException(ErrorCode.MODEL_TYPE_PROVIDER_EMPTY);
         }
         List<ModelProviderDTO> providerList = modelProviderService.getList(modelType, provideCode);
         if (CollectionUtil.isEmpty(providerList)) {
-            throw new RenException("供应器不存在");
+            throw new RenException(ErrorCode.MODEL_PROVIDER_NOT_EXIST);
         }
 
         // 再保存供应器提供的模型
@@ -88,11 +89,11 @@ public class ModelConfigServiceImpl extends BaseServiceImpl<ModelConfigDao, Mode
     public ModelConfigDTO edit(String modelType, String provideCode, String id, ModelConfigBodyDTO modelConfigBodyDTO) {
         // 先验证有没有供应器
         if (StringUtils.isBlank(modelType) || StringUtils.isBlank(provideCode)) {
-            throw new RenException("modelType和provideCode不能为空");
+            throw new RenException(ErrorCode.MODEL_TYPE_PROVIDER_EMPTY);
         }
         List<ModelProviderDTO> providerList = modelProviderService.getList(modelType, provideCode);
         if (CollectionUtil.isEmpty(providerList)) {
-            throw new RenException("供应器不存在");
+            throw new RenException(ErrorCode.MODEL_PROVIDER_NOT_EXIST);
         }
 
         // 再更新供应器提供的模型
@@ -110,7 +111,7 @@ public class ModelConfigServiceImpl extends BaseServiceImpl<ModelConfigDao, Mode
         // 查看是否是默认
         ModelConfigEntity modelConfig = modelConfigDao.selectById(id);
         if (modelConfig != null && modelConfig.getIsDefault() == 1) {
-            throw new RenException("该模型为默认模型，请先设置其他模型为默认模型");
+            throw new RenException(ErrorCode.MODEL_IS_DEFAULT_CANNOT_DELETE);
         }
         // 验证是否有引用
         checkAgentReference(id);
@@ -142,7 +143,7 @@ public class ModelConfigServiceImpl extends BaseServiceImpl<ModelConfigDao, Mode
             String agentNames = agents.stream()
                     .map(AgentEntity::getAgentName)
                     .collect(Collectors.joining("、"));
-            throw new RenException(String.format("该模型配置已被智能体[%s]引用，无法删除", agentNames));
+            throw new RenException(ErrorCode.MODEL_REFERENCED_BY_AGENT, agentNames);
         }
     }
 
@@ -160,7 +161,7 @@ public class ModelConfigServiceImpl extends BaseServiceImpl<ModelConfigDao, Mode
                             .eq("model_type", "Intent")
                             .like("config_json", "%" + modelId + "%"));
             if (!intentConfigs.isEmpty()) {
-                throw new RenException("该LLM模型已被意图识别配置引用，无法删除");
+                throw new RenException(ErrorCode.MODEL_REFERENCED_BY_INTENT);
             }
         }
     }

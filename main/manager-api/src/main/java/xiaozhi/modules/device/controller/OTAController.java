@@ -24,6 +24,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.SneakyThrows;
 import lombok.extern.slf4j.Slf4j;
 import xiaozhi.common.constant.Constant;
+import xiaozhi.common.exception.ErrorCode;
 import xiaozhi.modules.device.dto.DeviceReportReqDTO;
 import xiaozhi.modules.device.dto.DeviceReportRespDTO;
 import xiaozhi.modules.device.entity.DeviceEntity;
@@ -80,13 +81,13 @@ public class OTAController {
     public ResponseEntity<String> getOTA() {
         String wsUrl = sysParamsService.getValue(Constant.SERVER_WEBSOCKET, true);
         if (StringUtils.isBlank(wsUrl) || wsUrl.equals("null")) {
-            return ResponseEntity.ok("OTA接口不正常，缺少websocket地址，请登录智控台，在参数管理找到【server.websocket】配置");
+            return ResponseEntity.ok("ERROR[11022] OTA_WEBSOCKET_NOT_CONFIGURED");
         }
         String otaUrl = sysParamsService.getValue(Constant.SERVER_OTA, true);
         if (StringUtils.isBlank(otaUrl) || otaUrl.equals("null")) {
-            return ResponseEntity.ok("OTA接口不正常，缺少ota地址，请登录智控台，在参数管理找到【server.ota】配置");
+            return ResponseEntity.ok("ERROR[11023] OTA_URL_NOT_CONFIGURED");
         }
-        return ResponseEntity.ok("OTA接口运行正常，websocket集群数量：" + wsUrl.split(";").length);
+        return ResponseEntity.ok("OTA OK, websocket cluster size: " + wsUrl.split(";").length);
     }
 
     @SneakyThrows

@@ -20,6 +20,7 @@ import io.swagger.v3.oas.annotations.Parameters;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.AllArgsConstructor;
 import xiaozhi.common.constant.Constant;
+import xiaozhi.common.exception.ErrorCode;
 import xiaozhi.common.page.PageData;
 import xiaozhi.common.utils.Result;
 import xiaozhi.common.validator.ValidatorUtils;
@@ -52,7 +53,7 @@ public class SysDictDataController {
         ValidatorUtils.validateEntity(params);
         // 强制校验dictTypeId是否存在
         if (!params.containsKey("dictTypeId") || StringUtils.isEmpty(String.valueOf(params.get("dictTypeId")))) {
-            return new Result<PageData<SysDictDataVO>>().error("dictTypeId不能为空");
+            return new Result<PageData<SysDictDataVO>>().error(ErrorCode.DICT_TYPE_ID_NOT_EMPTY);
         }
 
         PageData<SysDictDataVO> page = sysDictDataService.page(params);
