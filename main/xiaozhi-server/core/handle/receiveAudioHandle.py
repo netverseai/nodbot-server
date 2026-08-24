@@ -6,7 +6,6 @@ import time
 import asyncio
 from core.handle.sendAudioHandle import SentenceType
 from core.utils.util import audio_to_data
-from core.utils.error_code import ErrorCode, get_error_message
 
 TAG = __name__
 
@@ -89,12 +88,12 @@ async def no_voice_close_connect(conn, have_voice):
                 return
             prompt = end_prompt.get("prompt")
             if not prompt:
-                prompt = "请你以```时间过得真快```未来头，用富有感情、依依不舍的话来结束这场对话吧。！"
+                prompt = 'Please, starting with "time flies so fast", end this conversation in a warm, reluctant way.'
             await startToChat(conn, prompt)
 
 
 async def max_out_size(conn):
-    text = get_error_message(ErrorCode.OUTPUT_LIMIT_REACHED)
+    text = "Sorry, I am a bit busy right now. Let's talk again tomorrow. Bye for now!"
     await send_stt_message(conn, text)
     file_path = "config/assets/max_output_size.wav"
     opus_packets, _ = audio_to_data(file_path)
@@ -107,11 +106,11 @@ async def check_bind_device(conn):
         # 确保bind_code是6位数字
         if len(conn.bind_code) != 6:
             conn.logger.bind(tag=TAG).error(f"无效的绑定码格式: {conn.bind_code}")
-            text = get_error_message(ErrorCode.BIND_CODE_FORMAT_INVALID)
+            text = "Invalid binding code. Please check the configuration."
             await send_stt_message(conn, text)
             return
 
-        text = get_error_message(ErrorCode.DEVICE_BIND_REQUIRED).format(code=conn.bind_code)
+        text = f"Please log in to the control panel and enter {conn.bind_code} to bind your device."
         await send_stt_message(conn, text)
 
         # 播放提示音
@@ -131,7 +130,7 @@ async def check_bind_device(conn):
                 continue
         conn.tts.tts_audio_queue.put((SentenceType.LAST, [], None))
     else:
-        text = get_error_message(ErrorCode.DEVICE_VERSION_NOT_FOUND)
+        text = "No version information was found for this device. Please configure the OTA address correctly and recompile the firmware."
         await send_stt_message(conn, text)
         music_path = "config/assets/bind_not_found.wav"
         opus_packets, _ = audio_to_data(music_path)
