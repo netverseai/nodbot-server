@@ -61,6 +61,13 @@ public class AgentServiceImpl extends BaseServiceImpl<AgentDao, AgentEntity> imp
     private final AgentTemplateService agentTemplateService;
     private final ModelProviderService modelProviderService;
 
+    /** 默认智能体创建的分布式锁存活时间（秒），防止锁持有者异常时死锁 */
+    private static final long DEFAULT_AGENT_LOCK_EXPIRE_SECONDS = 10L;
+    /** 未获取到锁时的最大重试次数 */
+    private static final int DEFAULT_AGENT_LOCK_RETRY_TIMES = 5;
+    /** 未获取到锁时的重试等待间隔（毫秒） */
+    private static final long DEFAULT_AGENT_LOCK_WAIT_MILLIS = 200L;
+
     @Override
     public PageData<AgentEntity> adminAgentList(Map<String, Object> params) {
         IPage<AgentEntity> page = agentDao.selectPage(
@@ -326,6 +333,96 @@ public class AgentServiceImpl extends BaseServiceImpl<AgentDao, AgentEntity> imp
             agentChatHistoryService.deleteByAgentId(existingEntity.getId(), true, false);
         }
         this.updateById(existingEntity);
+    }
+
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public AgentEntity getOrCreateDefaultAgent(Long userId) {
+        if (userId == null) {
+            throw new RenException(ErrorCode.AGENT_NOT_EXIST);
+        }
+
+        // 快路径：账户下已存在智能体，直接返回第一个（排序最小、创建最早的）
+        AgentEntity first = getFirstAgentByUserId(userId);
+        if (first != null) {
+            return first;
+        }
+
+        // 慢路径：账户下暂无智能体。用分布式锁保证并发下只创建一个默认智能体，
+        // 避免多个设备同时连接时重复创建
+        String lockKey = RedisKeys.getDefaultAgentLockKey(userId);
+        for (int i = 0; i < DEFAULT_AGENT_LOCK_RETRY_TIMES; i++) {
+            boolean locked = redisUtils.setIfAbsent(lockKey, "1", DEFAULT_AGENT_LOCK_EXPIRE_SECONDS);
+            if (locked) {
+                try {
+                    // 持锁后二次检查：等待/重试期间可能已被其他请求创建
+                    AgentEntity existing = getFirstAgentByUserId(userId);
+                    if (existing != null) {
+                        return existing;
+                    }
+                    return insertDefaultAgent(userId);
+                } finally {
+                    redisUtils.delete(lockKey);
+                }
+            }
+            // 未获取到锁：说明其他请求正在创建，短暂等待后重试
+            try {
+                Thread.sleep(DEFAULT_AGENT_LOCK_WAIT_MILLIS);
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+                break;
+            }
+        }
+
+        // 重试耗尽仍未获取到锁：二次确认是否已有智能体，没有则按兜底创建
+        AgentEntity latest = getFirstAgentByUserId(userId);
+        if (latest != null) {
+            return latest;
+        }
+        return insertDefaultAgent(userId);
+    }
+
+    private AgentEntity getFirstAgentByUserId(Long userId) {
+        QueryWrapper<AgentEntity> wrapper = new QueryWrapper<>();
+        wrapper.eq("user_id", userId).orderByAsc("sort", "created_at");
+        List<AgentEntity> agents = agentDao.selectList(wrapper);
+        return agents.isEmpty() ? null : agents.get(0);
+    }
+
+    private AgentEntity insertDefaultAgent(Long userId) {
+        AgentEntity entity = new AgentEntity();
+        entity.setUserId(userId);
+        entity.setCreator(userId);
+        entity.setUpdater(userId);
+        entity.setSort(0);
+
+        AgentTemplateEntity template = agentTemplateService.getDefaultTemplate();
+        if (template != null) {
+            entity.setAgentName(template.getAgentName());
+            entity.setAsrModelId(template.getAsrModelId());
+            entity.setVadModelId(template.getVadModelId());
+            entity.setLlmModelId(template.getLlmModelId());
+            entity.setVllmModelId(template.getVllmModelId());
+            entity.setTtsModelId(template.getTtsModelId());
+            entity.setTtsVoiceId(template.getTtsVoiceId());
+            entity.setMemModelId(template.getMemModelId());
+            entity.setIntentModelId(template.getIntentModelId());
+            entity.setSystemPrompt(template.getSystemPrompt());
+            entity.setSummaryMemory(template.getSummaryMemory());
+            entity.setChatHistoryConf(template.getChatHistoryConf());
+            entity.setLangCode(template.getLangCode());
+            entity.setLanguage(template.getLanguage());
+        }
+        if (StringUtils.isBlank(entity.getAgentName())) {
+            entity.setAgentName("默认智能体");
+        }
+
+        Date now = new Date();
+        entity.setCreatedAt(now);
+        entity.setUpdatedAt(now);
+
+        insert(entity);
+        return entity;
     }
 
     @Override

@@ -139,4 +139,8 @@ public class RedisKeys {
         return "sms:Validate:Code:" + phone + ":today_count";
     }
 
+    public static String getDefaultAgentLockKey(Long userId) {
+        return "agent:default:lock:" + userId;
+    }
+
 }

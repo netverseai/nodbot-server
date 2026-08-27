@@ -95,11 +95,8 @@ public class ConfigServiceImpl implements ConfigService {
             throw new RenException(ErrorCode.OTA_DEVICE_NOT_FOUND, "not found device");
         }
 
-        // 获取智能体信息
-        AgentEntity agent = agentService.getAgentById(device.getAgentId());
-        if (agent == null) {
-            throw new RenException(ErrorCode.AGENT_NOT_EXIST);
-        }
+        // 获取智能体信息（若原绑定智能体已不存在则自动修复并重新关联）
+        AgentEntity agent = resolveDeviceAgent(device);
         // 获取音色信息
         String voice = null;
         TimbreDetailsVO timbre = timbreService.get(agent.getTtsVoiceId());
@@ -162,6 +159,42 @@ public class ConfigServiceImpl implements ConfigService {
                 true);
 
         return result;
+    }
+
+    /**
+     * 解析设备对应的智能体
+     * 若设备绑定的智能体已不存在，则自动获取或创建用户可用的智能体，并更新设备绑定关系，
+     * 保证已绑定设备始终能解析到智能体。用户无任何智能体时按默认模板自动创建。
+     */
+    private AgentEntity resolveDeviceAgent(DeviceEntity device) {
+        // 无归属用户，说明绑定关系无效：删除设备，让其重新进入激活流程
+        if (device.getUserId() == null) {
+            handleInvalidDeviceBinding(device);
+        }
+
+        AgentEntity agent;
+        try {
+            agent = agentService.getAgentById(device.getAgentId());
+        } catch (RenException e) {
+            if (e.getCode() != ErrorCode.AGENT_NOT_EXIST) {
+                throw e;
+            }
+            // 设备绑定的智能体已被删除：获取或创建用户可用的智能体，并修复设备绑定
+            agent = agentService.getOrCreateDefaultAgent(device.getUserId());
+            device.setAgentId(agent.getId());
+            deviceService.updateById(device);
+        }
+        return agent;
+    }
+
+    /**
+     * 处理无效绑定：无归属用户的设备记录属于无效绑定，删除设备，使其重新进入激活流程
+     */
+    private void handleInvalidDeviceBinding(DeviceEntity device) {
+        deviceService.deleteById(device.getId());
+        String cachedCode = deviceService.geCodeByDeviceId(device.getMacAddress());
+        throw new RenException(ErrorCode.OTA_DEVICE_NEED_BIND,
+                StringUtils.isNotBlank(cachedCode) ? cachedCode : "");
     }
 
     /**

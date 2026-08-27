@@ -74,6 +74,16 @@ public class RedisUtils {
         set(key, value, DEFAULT_EXPIRE);
     }
 
+    /**
+     * 仅当 key 不存在时写入并设置过期时间（等价于 SET NX + EX），用于分布式锁等场景
+     * @return true 表示写入成功（获取到锁）；false 表示 key 已存在（未获取到锁）
+     */
+    public boolean setIfAbsent(String key, Object value, long expire) {
+        Boolean result = redisTemplate.opsForValue()
+                .setIfAbsent(key, value, expire, TimeUnit.SECONDS);
+        return Boolean.TRUE.equals(result);
+    }
+
     public Object get(String key, long expire) {
         Object value = redisTemplate.opsForValue().get(key);
         if (expire != NOT_EXPIRE) {

@@ -84,6 +84,17 @@ public interface AgentService extends BaseService<AgentEntity> {
     boolean checkAgentPermission(String agentId, Long userId);
 
     /**
+     * 获取或创建用户可用的智能体
+     * 若用户已拥有智能体，返回第一个（排序最小、创建最早的）；
+     * 若用户没有任何智能体，则按默认模板创建一个并返回。
+     * 用于设备绑定关系失效时的自动修复，保证已绑定设备始终能找到智能体。
+     *
+     * @param userId 用户ID
+     * @return 可用的智能体实体
+     */
+    AgentEntity getOrCreateDefaultAgent(Long userId);
+
+    /**
      * 更新智能体
      *
      * @param agentId 智能体ID
