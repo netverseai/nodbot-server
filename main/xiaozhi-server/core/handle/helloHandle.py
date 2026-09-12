@@ -35,7 +35,27 @@ async def handleHelloMessage(conn, msg_json):
         format = audio_params.get("format")
         conn.logger.bind(tag=TAG).info(f"客户端音频格式: {format}")
         conn.audio_format = format
-        conn.welcome_msg["audio_params"] = audio_params
+        # 下行(TTS播放)采样率：默认 24000，客户端可在 hello 中请求，合法值则跟随(自动适应)
+        # 该值写入握手响应，客户端据此解码(server_sample_rate_)；opus编码器与双向流式TTS均支持
+        _SUPPORTED_RATES = {8000, 16000, 22050, 24000, 32000, 44100, 48000}
+        requested = audio_params.get("sample_rate")
+        requested = int(requested) if requested else None
+        if requested in _SUPPORTED_RATES:
+            conn.audio_sample_rate = requested
+            conn.logger.bind(tag=TAG).info(
+                f"服务端下行音频采样率: {conn.audio_sample_rate}Hz（按客户端请求）"
+            )
+        else:
+            conn.audio_sample_rate = 24000
+            if requested:
+                conn.logger.bind(tag=TAG).warning(
+                    f"客户端请求采样率 {requested} 不在支持集合，回退到 {conn.audio_sample_rate}Hz"
+                )
+        # 握手响应明确返回服务端将实际使用的采样率，与设备端解码严格一致
+        response_audio_params = dict(audio_params)
+        response_audio_params["format"] = "opus"
+        response_audio_params["sample_rate"] = conn.audio_sample_rate
+        conn.welcome_msg["audio_params"] = response_audio_params
     features = msg_json.get("features")
     if features:
         conn.logger.bind(tag=TAG).info(f"客户端特性: {features}")
@@ -83,7 +103,8 @@ async def checkWakeupWords(conn, text):
 
     # 播放唤醒词回复
     conn.client_abort = False
-    opus_packets, _ = audio_to_data(response.get("file_path"))
+    _rate = getattr(conn, "audio_sample_rate", None) or 24000
+    opus_packets, _ = audio_to_data(response.get("file_path"), sample_rate=_rate)
 
     conn.logger.bind(tag=TAG).info(f"播放唤醒词回复: {response.get('text')}")
     await sendAudioMessage(conn, SentenceType.FIRST, opus_packets, response.get("text"))
@@ -129,7 +150,9 @@ async def wakeupWordsResponse(conn):
         # 获取当前音色
         voice = getattr(conn.tts, "voice", "default")
 
-        wav_bytes = opus_datas_to_wav_bytes(tts_result, sample_rate=16000)
+        wav_bytes = opus_datas_to_wav_bytes(
+            tts_result, sample_rate=getattr(conn, "audio_sample_rate", None) or 24000
+        )
         file_path = wakeup_words_config.generate_file_path(voice)
         with open(file_path, "wb") as f:
             f.write(wav_bytes)

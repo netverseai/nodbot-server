@@ -8,7 +8,6 @@ import websockets
 from core.utils.tts import MarkdownCleaner
 from config.logger import setup_logging
 from core.utils import opus_encoder_utils
-from core.utils.util import check_model_key
 from core.providers.tts.base import TTSProviderBase
 from core.handle.abortHandle import handleAbortMessage
 from core.providers.tts.dto.dto import SentenceType, ContentType, InterfaceType
@@ -144,28 +143,42 @@ class TTSProvider(TTSProviderBase):
         self.ws = None
         self.interface_type = InterfaceType.DUAL_STREAM
         self._monitor_task = None  # 监听任务引用
-        self.appId = config.get("appid")
-        self.access_token = config.get("access_token")
-        self.cluster = config.get("cluster")
-        self.resource_id = config.get("resource_id")
+        self.api_key = config.get("api_key")
         if config.get("private_voice"):
             self.voice = config.get("private_voice")
         else:
             self.voice = config.get("speaker")
+        self.model = config.get("model")
+        self.resource_id = config.get("resource_id") or "seed-tts-2.0"
+        self.audio_format = config.get("format", "pcm")
+        self.sample_rate = int(config.get("sample_rate", 24000))
+        # 语速/音量：取值范围 [-50,100]，100=2.0倍速/音量，-50=0.5倍速/音量，默认0
+        self.speech_rate = int(config.get("speech_rate", 0))
+        self.loudness_rate = int(config.get("loudness_rate", 0))
         self.ws_url = config.get("ws_url")
-        self.authorization = config.get("authorization")
-        self.header = {"Authorization": f"{self.authorization}{self.access_token}"}
         self.enable_two_way = True
         self.tts_text = ""
         self.opus_encoder = opus_encoder_utils.OpusEncoderUtils(
-            sample_rate=16000, channels=1, frame_size_ms=60
+            sample_rate=self.sample_rate, channels=1, frame_size_ms=60
         )
-        model_key_msg = check_model_key("TTS", self.access_token)
-        if model_key_msg:
-            logger.bind(tag=TAG).error(model_key_msg)
+        if not self.api_key:
+            logger.bind(tag=TAG).error(
+                "豆包TTS 2.0 双向流式缺少 X-Api-Key (api_key) 配置"
+            )
 
     async def open_audio_channels(self, conn):
         try:
+            # 尽量满足客户端在握手(hello)中协商的采样率(如 24000)
+            # 采样率不可实时变更，需在推流前按协商值重建 opus 编码器
+            client_rate = getattr(conn, "audio_sample_rate", None)
+            if client_rate and int(client_rate) != int(self.sample_rate):
+                self.sample_rate = int(client_rate)
+                self.opus_encoder = opus_encoder_utils.OpusEncoderUtils(
+                    sample_rate=self.sample_rate, channels=1, frame_size_ms=60
+                )
+                logger.bind(tag=TAG).info(
+                    f"双向流式TTS按客户端协商采样率 {self.sample_rate}Hz 初始化"
+                )
             await super().open_audio_channels(conn)
         except Exception as e:
             logger.bind(tag=TAG).error(f"Failed to open audio channels: {str(e)}")
@@ -177,10 +190,9 @@ class TTSProvider(TTSProviderBase):
         try:
             logger.bind(tag=TAG).info("开始建立新连接...")
             ws_header = {
-                "X-Api-App-Key": self.appId,
-                "X-Api-Access-Key": self.access_token,
+                "X-Api-Key": self.api_key,
                 "X-Api-Resource-Id": self.resource_id,
-                "X-Api-Connect-Id": uuid.uuid4(),
+                "X-Api-Connect-Id": str(uuid.uuid4()),
             }
             self.ws = await websockets.connect(
                 self.ws_url, additional_headers=ws_header, max_size=1000000000
@@ -319,6 +331,9 @@ class TTSProvider(TTSProviderBase):
 
             # 启动监听任务
             self._monitor_task = asyncio.create_task(self._start_monitor_tts_response())
+
+            # 建立连接握手（StartConnection 事件）
+            await self.start_connection()
 
             header = Header(
                 message_type=FULL_CLIENT_REQUEST,
@@ -607,26 +622,29 @@ class TTSProvider(TTSProviderBase):
         event=EVENT_NONE,
         text="",
         speaker="",
-        audio_format="pcm",
-        audio_sample_rate=16000,
+        audio_format=None,
+        audio_sample_rate=None,
     ):
-        return str.encode(
-            json.dumps(
-                {
-                    "user": {"uid": uid},
-                    "event": event,
-                    "namespace": "BidirectionalTTS",
-                    "req_params": {
-                        "text": text,
-                        "speaker": speaker,
-                        "audio_params": {
-                            "format": audio_format,
-                            "sample_rate": audio_sample_rate,
-                        },
-                    },
-                }
-            )
-        )
+        if audio_format is None:
+            audio_format = self.audio_format
+        if audio_sample_rate is None:
+            audio_sample_rate = self.sample_rate
+
+        if event == EVENT_StartSession:
+            # StartSession：携带 speaker / model / audio_params 固定参数
+            req_params = {"speaker": speaker}
+            if self.model:
+                req_params["model"] = self.model
+            req_params["audio_params"] = {
+                "format": audio_format,
+                "sample_rate": audio_sample_rate,
+                "speech_rate": self.speech_rate,
+                "loudness_rate": self.loudness_rate,
+            }
+        else:
+            # TaskRequest：仅携带待合成的文本
+            req_params = {"text": text}
+        return str.encode(json.dumps({"req_params": req_params}))
 
     def wav_to_opus_data_audio_raw(self, raw_data_var, is_end=False):
         opus_datas = self.opus_encoder.encode_pcm_to_opus(raw_data_var, is_end)
@@ -655,17 +673,26 @@ class TTSProvider(TTSProviderBase):
             async def _generate_audio():
                 # 创建新的WebSocket连接
                 ws_header = {
-                    "X-Api-App-Key": self.appId,
-                    "X-Api-Access-Key": self.access_token,
+                    "X-Api-Key": self.api_key,
                     "X-Api-Resource-Id": self.resource_id,
-                    "X-Api-Connect-Id": uuid.uuid4(),
+                    "X-Api-Connect-Id": str(uuid.uuid4()),
                 }
                 ws = await websockets.connect(
                     self.ws_url, additional_headers=ws_header, max_size=1000000000
                 )
 
                 try:
-                    # 启动会话
+                    # 建立连接握手（SendConnection 事件）
+                    await self.send_event(
+                        ws,
+                        Header(
+                            message_type=FULL_CLIENT_REQUEST,
+                            message_type_specific_flags=MsgTypeFlagWithEvent,
+                            serial_method=JSON,
+                        ).as_bytes(),
+                        Optional(event=EVENT_Start_Connection).as_bytes(),
+                        str.encode("{}"),
+                    )
                     header = Header(
                         message_type=FULL_CLIENT_REQUEST,
                         message_type_specific_flags=MsgTypeFlagWithEvent,

@@ -88,7 +88,7 @@ class TTSProviderBase(ABC):
                     audio_bytes = asyncio.run(self.text_to_speak(text, None))
                     if audio_bytes:
                         audio_datas, _ = audio_bytes_to_data(
-                            audio_bytes, file_type=self.audio_file_type, is_opus=True
+                            audio_bytes, file_type=self.audio_file_type, is_opus=True, sample_rate=self._conn_sample_rate()
                         )
                         return audio_datas
                     else:
@@ -140,13 +140,17 @@ class TTSProviderBase(ABC):
     async def text_to_speak(self, text, output_file):
         pass
 
+    def _conn_sample_rate(self):
+        """下行协商采样率：默认 24000，跟随客户端握手协商值"""
+        return getattr(getattr(self, "conn", None), "audio_sample_rate", None) or 24000
+
     def audio_to_pcm_data(self, audio_file_path):
         """音频文件转换为PCM编码"""
-        return audio_to_data(audio_file_path, is_opus=False)
+        return audio_to_data(audio_file_path, is_opus=False, sample_rate=self._conn_sample_rate())
 
     def audio_to_opus_data(self, audio_file_path):
         """音频文件转换为Opus编码"""
-        return audio_to_data(audio_file_path, is_opus=True)
+        return audio_to_data(audio_file_path, is_opus=True, sample_rate=self._conn_sample_rate())
 
     def tts_one_sentence(
         self,

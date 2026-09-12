@@ -753,7 +753,7 @@ def analyze_emotion(text):
     return top_emotions[0]  # 如果都不在优先级列表里，返回第一个
 
 
-def audio_to_data(audio_file_path, is_opus=True):
+def audio_to_data(audio_file_path, is_opus=True, sample_rate=24000):
     # 获取文件后缀名
     file_type = os.path.splitext(audio_file_path)[1]
     if file_type:
@@ -763,18 +763,18 @@ def audio_to_data(audio_file_path, is_opus=True):
         audio_file_path, format=file_type, parameters=["-nostdin"]
     )
 
-    # 转换为单声道/16kHz采样率/16位小端编码（确保与编码器匹配）
-    audio = audio.set_channels(1).set_frame_rate(16000).set_sample_width(2)
+    # 转换为单声道/指定采样率/16位小端编码（确保与编码器及下行协商采样率匹配）
+    audio = audio.set_channels(1).set_frame_rate(sample_rate).set_sample_width(2)
 
     # 音频时长(秒)
     duration = len(audio) / 1000.0
 
     # 获取原始PCM数据（16位小端）
     raw_data = audio.raw_data
-    return pcm_to_data(raw_data, is_opus), duration
+    return pcm_to_data(raw_data, is_opus, sample_rate=sample_rate), duration
 
 
-def audio_bytes_to_data(audio_bytes, file_type, is_opus=True):
+def audio_bytes_to_data(audio_bytes, file_type, is_opus=True, sample_rate=24000):
     """
     直接用音频二进制数据转为opus/pcm数据，支持wav、mp3、p3
     """
@@ -786,19 +786,19 @@ def audio_bytes_to_data(audio_bytes, file_type, is_opus=True):
         audio = AudioSegment.from_file(
             BytesIO(audio_bytes), format=file_type, parameters=["-nostdin"]
         )
-        audio = audio.set_channels(1).set_frame_rate(16000).set_sample_width(2)
+        audio = audio.set_channels(1).set_frame_rate(sample_rate).set_sample_width(2)
         duration = len(audio) / 1000.0
         raw_data = audio.raw_data
-        return pcm_to_data(raw_data, is_opus), duration
+        return pcm_to_data(raw_data, is_opus, sample_rate=sample_rate), duration
 
 
-def pcm_to_data(raw_data, is_opus=True):
+def pcm_to_data(raw_data, is_opus=True, sample_rate=24000):
     # 初始化Opus编码器
-    encoder = opuslib_next.Encoder(16000, 1, opuslib_next.APPLICATION_AUDIO)
+    encoder = opuslib_next.Encoder(sample_rate, 1, opuslib_next.APPLICATION_AUDIO)
 
     # 编码参数
     frame_duration = 60  # 60ms per frame
-    frame_size = int(16000 * frame_duration / 1000)  # 960 samples/frame
+    frame_size = int(sample_rate * frame_duration / 1000)
 
     datas = []
     # 按帧处理所有音频数据（包括最后一帧可能补零）
@@ -823,7 +823,7 @@ def pcm_to_data(raw_data, is_opus=True):
     return datas
 
 
-def opus_datas_to_wav_bytes(opus_datas, sample_rate=16000, channels=1):
+def opus_datas_to_wav_bytes(opus_datas, sample_rate=24000, channels=1):
     """
     将opus帧列表解码为wav字节流
     """

@@ -80,7 +80,9 @@ xiaozhi:
   transport: websocket
   audio_params:
     format: opus
-    sample_rate: 16000
+    # 下行(播放)采样率：随 hello 返回给客户端解码(server_sample_rate_)，
+    # 必须与双向流式TTS输出保持一致；24000 在火山合法区间且编码器支持
+    sample_rate: 24000
     channels: 1
     frame_duration: 60
 
@@ -295,6 +297,20 @@ ASR:
     boosting_table_name: （选填）你的热词文件名称
     correct_table_name: （选填）你的替换词文件名称
     output_dir: tmp/
+  DoubaoSeedASR:
+    # 豆包流式语音识别模型2.0（SA-UC），流式输入音频返回整句，非实时场景
+    # API Key 获取：https://console.volcengine.com/speech/new/setting/apikeys
+    # resource_id：小时版 volc.seedasr.sauc.duration / 并发版 volc.seedasr.sauc.concurrent
+    type: doubao_seedasr
+    api_key: 你的火山引擎新版控制台X-Api-Key
+    resource_id: volc.seedasr.sauc.duration
+    # language 为空时，模型自动识别：中文、英文、上海话、闽南话、四川话、陕西话、粤语
+    language: ''
+    # 发送的是解码后的裸PCM流，故 format=pcm / codec=raw；ASR输入采样率固定16k(由客户端上行录音与服务端解码决定，无需配置)
+    format: pcm
+    codec: raw
+    seg_duration: 200
+    output_dir: tmp/
   TencentASR:
     # token申请地址：https://console.cloud.tencent.com/cam/capi
     # 免费领取资源：https://console.cloud.tencent.com/asr/resourcebundle
@@ -506,19 +522,23 @@ TTS:
     speed_ratio: 1.0
     volume_ratio: 1.0
     pitch_ratio: 1.0
-  #火山tts，支持双向流式tts
+  #豆包(火山引擎)语音合成大模型2.0，支持双向流式tts，低时延，多语种/多方言
   HuoshanDoubleStreamTTS:
     type: huoshan_double_stream
-    # 访问 https://console.volcengine.com/speech/service/10007 开通语音合成大模型，购买音色
-    # 在页面底部获取appid和access_token
-    # 资源ID固定为：volc.service_type.10029（大模型语音合成及混音）
-    # 如果是机智云，把接口地址换成wss://bytedance.gizwitsapi.com/api/v3/tts/bidirection
-    # 机智云不需要天填 appid
+    # 新控制台 API-Key：https://console.volcengine.com/speech/new/setting/apikeys?projectName=default
+    # 音色库(2.0音色ID)：https://console.volcengine.com/speech/new/voices?projectName=default
+    # 资源ID固定为 seed-tts-2.0（豆包语音合成大模型2.0）或 seed-icl-2.0（声音复刻大模型2.0）
+    # 如果是机智云，把接口地址换成 wss://bytedance.gizwitsapi.com/api/v3/tts/bidirection
     ws_url: wss://openspeech.bytedance.com/api/v3/tts/bidirection
-    appid: 你的火山引擎语音合成服务appid
-    access_token: 你的火山引擎语音合成服务access_token
-    resource_id: volc.service_type.10029
-    speaker: zh_female_wanwanxiaohe_moon_bigtts
+    api_key: 你的火山引擎新控制台 API-Key (X-Api-Key)
+    resource_id: seed-tts-2.0
+    speaker: zh_female_gaolengyujie_uranus_bigtts
+    # model: seed-tts-2.0-standard  # 仅当speaker为复刻音色时需指定
+    # 下行(播放)采样率由服务端握手时决定(默认24000)并返回给客户端，无需在此配置
+    format: pcm
+    # 语速/音量：取值范围 [-50,100]，100=2.0倍速/音量，-50=0.5倍速/音量，默认0
+    speech_rate: 0
+    loudness_rate: 0
   CosyVoiceSiliconflow:
     type: siliconflow
     # 硅基流动TTS
@@ -527,7 +547,11 @@ TTS:
     voice: FunAudioLLM/CosyVoice2-0.5B:alex
     output_dir: tmp/
     access_token: 你的硅基流动API密钥
+    # 响应格式锁定 wav(最优)：自带采样率头，relay 重采样/opus 编码最稳定且无损
     response_format: wav
+    # 语速(0.25~4.0)/音量增益(-10~10)：随请求发给API
+    speed: 1.0
+    gain: 0
   CozeCnTTS:
     type: cozecn
     # COZECN TTS

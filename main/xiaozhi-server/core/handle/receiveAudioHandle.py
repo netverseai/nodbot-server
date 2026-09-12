@@ -96,7 +96,9 @@ async def max_out_size(conn):
     text = "Sorry, I am a bit busy right now. Let's talk again tomorrow. Bye for now!"
     await send_stt_message(conn, text)
     file_path = "config/assets/max_output_size.wav"
-    opus_packets, _ = audio_to_data(file_path)
+    opus_packets, _ = audio_to_data(
+        file_path, sample_rate=getattr(conn, "audio_sample_rate", None) or 24000
+    )
     conn.tts.tts_audio_queue.put((SentenceType.LAST, opus_packets, text))
     conn.close_after_chat = True
 
@@ -115,7 +117,9 @@ async def check_bind_device(conn):
 
         # 播放提示音
         music_path = "config/assets/bind_code.wav"
-        opus_packets, _ = audio_to_data(music_path)
+        opus_packets, _ = audio_to_data(
+            music_path, sample_rate=getattr(conn, "audio_sample_rate", None) or 24000
+        )
         conn.tts.tts_audio_queue.put((SentenceType.FIRST, opus_packets, text))
 
         # 逐个播放数字
@@ -123,7 +127,9 @@ async def check_bind_device(conn):
             try:
                 digit = conn.bind_code[i]
                 num_path = f"config/assets/bind_code/{digit}.wav"
-                num_packets, _ = audio_to_data(num_path)
+                num_packets, _ = audio_to_data(
+                    num_path, sample_rate=getattr(conn, "audio_sample_rate", None) or 24000
+                )
                 conn.tts.tts_audio_queue.put((SentenceType.MIDDLE, num_packets, None))
             except Exception as e:
                 conn.logger.bind(tag=TAG).error(f"播放数字音频失败: {e}")
@@ -133,5 +139,7 @@ async def check_bind_device(conn):
         text = "No version information was found for this device. Please configure the OTA address correctly and recompile the firmware."
         await send_stt_message(conn, text)
         music_path = "config/assets/bind_not_found.wav"
-        opus_packets, _ = audio_to_data(music_path)
+        opus_packets, _ = audio_to_data(
+            music_path, sample_rate=getattr(conn, "audio_sample_rate", None) or 24000
+        )
         conn.tts.tts_audio_queue.put((SentenceType.LAST, opus_packets, text))
