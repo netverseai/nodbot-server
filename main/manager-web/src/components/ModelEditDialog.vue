@@ -61,17 +61,18 @@
       <div style="font-size: 20px; font-weight: bold; color: #3d4566; margin-bottom: 15px;">调用信息</div>
       <div style="height: 2px; background: #e9e9e9; margin-bottom: 22px;"></div>
 
-      <el-form :model="form.configJson" ref="callInfoForm" label-width="auto" class="custom-form">
+      <el-form :model="form.configJson" ref="callInfoForm" label-position="left" class="custom-form call-info-form">
         <template v-for="(row, rowIndex) in chunkedCallInfoFields">
           <div :key="rowIndex" style="display: flex; gap: 20px; margin-bottom: 0;">
             <el-form-item v-for="field in row" :key="field.prop" :label="field.label" :prop="field.prop"
-              style="flex: 1;">
+              class="call-info-item" style="flex: 1; min-width: 0;">
               <template v-if="field.type === 'json-textarea'">
-                <el-input v-model="fieldJsonMap[field.prop]" type="textarea" :rows="3" placeholder="请输入JSON格式变量(示例:{'key':'value'})"
-                  class="custom-input-bg" @change="(val) => handleJsonChange(field.prop, val)"></el-input>
+                <el-input v-model="fieldJsonMap[field.prop]" type="textarea" :rows="3"
+                  placeholder="请输入JSON格式变量(示例:{'key':'value'})" class="custom-input-bg"
+                  @change="(val) => handleJsonChange(field.prop, val)"></el-input>
               </template>
-              <el-input v-else v-model="form.configJson[field.prop]" :placeholder="field.placeholder" :type="field.type"
-                class="custom-input-bg" :show-password="field.type === 'password'"></el-input>
+              <el-input v-else v-model="form.configJson[field.prop]" :placeholder="field.placeholder"
+                :type="field.type" class="custom-input-bg" :show-password="field.type === 'password'"></el-input>
             </el-form-item>
           </div>
         </template>
@@ -138,7 +139,7 @@ export default {
         result.push(this.dynamicCallInfoFields.slice(i, i + chunkSize));
       }
       return result;
-    },
+    }
   },
   watch: {
     modelType() {
@@ -502,5 +503,30 @@ export default {
   font-weight: normal;
   text-align: right;
   padding-right: 20px;
+}
+
+/* 调用信息：保留双排(两列)，label 限宽自动换行，文本框撑满剩余空间 */
+.call-info-form ::v-deep .el-form-item {
+  display: flex;
+  align-items: flex-start;
+  margin-bottom: 16px;
+}
+.call-info-form ::v-deep .el-form-item__label {
+  flex: 0 0 auto;
+  max-width: 120px;
+  box-sizing: border-box;
+  padding-right: 8px;
+  text-align: left;
+  white-space: normal;
+  word-break: break-all;
+  line-height: 1.6;
+}
+.call-info-form ::v-deep .el-form-item__content {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+.call-info-form ::v-deep .el-input,
+.call-info-form ::v-deep .el-textarea {
+  width: 100%;
 }
 </style>
