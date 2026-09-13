@@ -4,6 +4,7 @@ import json
 import gzip
 import struct
 import time
+import asyncio
 import websockets
 from typing import Optional, Tuple, List
 from config.logger import setup_logging
@@ -49,22 +50,26 @@ def parse_response(res: bytes) -> dict:
 
     result = {}
     if message_type_specific_flags & 0x01:  # POS_SEQUENCE
-        result["payload_sequence"] = struct.unpack(">i", payload[:4])[0]
-        payload = payload[4:]
+        if len(payload) >= 4:
+            result["payload_sequence"] = struct.unpack(">i", payload[:4])[0]
+            payload = payload[4:]
     if message_type_specific_flags & 0x02:
         result["is_last_package"] = True
     if message_type_specific_flags & 0x04:
-        result["event"] = struct.unpack(">i", payload[:4])[0]
-        payload = payload[4:]
+        if len(payload) >= 4:
+            result["event"] = struct.unpack(">i", payload[:4])[0]
+            payload = payload[4:]
 
     payload_msg = None
     if message_type == SERVER_FULL_RESPONSE:
-        result["payload_size"] = struct.unpack(">I", payload[:4])[0]
-        payload = payload[4:]
+        if len(payload) >= 4:
+            result["payload_size"] = struct.unpack(">I", payload[:4])[0]
+            payload = payload[4:]
     elif message_type == SERVER_ERROR_RESPONSE:
-        result["code"] = struct.unpack(">i", payload[:4])[0]
-        result["payload_size"] = struct.unpack(">I", payload[4:8])[0]
-        payload = payload[8:]
+        if len(payload) >= 8:
+            result["code"] = struct.unpack(">i", payload[:4])[0]
+            result["payload_size"] = struct.unpack(">I", payload[4:8])[0]
+            payload = payload[8:]
 
     if not payload:
         return result
@@ -104,12 +109,17 @@ class ASRProvider(ASRProviderBase):
         self.channel = int(config.get("channel", 1))
         self.seg_duration = int(config.get("seg_duration", 200))
 
-        # request 参数
+        # request 参数（默认值与官方 API 文档一致）
         self.enable_itn = config.get("enable_itn", True)
         self.enable_punc = config.get("enable_punc", True)
-        self.enable_ddc = config.get("enable_ddc", True)
-        self.show_utterances = config.get("show_utterances", True)
+        self.enable_ddc = config.get("enable_ddc", False)
+        self.show_utterances = config.get("show_utterances", False)
         self.enable_auto_lang = config.get("enable_auto_lang", False)
+        self.enable_lid = config.get("enable_lid", False)
+        # 语境词典/热词/上下文（corpus），支持 dict 或 JSON 字符串；与 enable_auto_lang 互斥
+        self.corpus = config.get("corpus")
+        # 热词词表 ID（在控制台配置热词后获取，经 request.corpus.boosting_table_id 下发）
+        self.boosting_table_id = config.get("boosting_table_id")
 
         os.makedirs(self.output_dir, exist_ok=True)
 
@@ -143,7 +153,6 @@ class ASRProvider(ASRProviderBase):
         request = {
             "user": {"uid": f"streaming_asr_{uuid.uuid4()}"},
             "audio": {
-                "language": self.language,
                 "format": self.format,
                 "codec": self.codec,
                 "rate": self.rate,
@@ -156,12 +165,37 @@ class ASRProvider(ASRProviderBase):
                 "enable_punc": self.enable_punc,
                 "enable_ddc": self.enable_ddc,
                 "show_utterances": self.show_utterances,
-                "enable_auto_lang": self.enable_auto_lang,
             },
         }
-        # 指定语种时禁止同时开启自动语种
-        if self.enable_auto_lang and self.language:
-            request["request"]["enable_auto_lang"] = False
+        # 指定语种：留空("")或省略=自动识别（中/英/上海话/闽南话/四川话/陕西话/粤语）；
+        # 可指定语种代码如 zh-CN/en-US/ja-JP/yue-CN 等（见官方文档）
+        if self.language and str(self.language).strip():
+            request["audio"]["language"] = str(self.language).strip()
+        # 自动识别语种：仅在未指定 language 时生效；且与 corpus 互斥（官方文档）
+        if self.enable_auto_lang and not self.corpus:
+            request["request"]["enable_auto_lang"] = True
+        # 中英文及方言识别标签
+        if self.enable_lid:
+            request["request"]["enable_lid"] = True
+        # 语境词典/热词/上下文：支持 dict 或 JSON 字符串
+        corpus = None
+        if self.corpus:
+            if isinstance(self.corpus, dict):
+                corpus = self.corpus
+            elif isinstance(self.corpus, str) and self.corpus.strip():
+                try:
+                    corpus = json.loads(self.corpus)
+                except Exception:
+                    corpus = None
+        # 热词词表 ID 独立配置：并入 corpus 后统一下发
+        if self.boosting_table_id and str(self.boosting_table_id).strip():
+            if corpus is None:
+                corpus = {}
+            if not isinstance(corpus, dict):
+                corpus = {}
+            corpus["boosting_table_id"] = str(self.boosting_table_id).strip()
+        if corpus:
+            request["request"]["corpus"] = corpus
         return request
 
     async def _send_request(self, pcm_data: bytes, segment_size: int) -> Optional[str]:
@@ -174,7 +208,7 @@ class ASRProvider(ASRProviderBase):
                 close_timeout=10,
             ) as websocket:
 
-                # 1. 发送完整客户端请求（gzip）
+                # 1. 发送完整客户端请求（gzip），完整请求占用序号 1
                 payload_bytes = gzip.compress(
                     json.dumps(self._construct_request()).encode("utf-8")
                 )
@@ -184,46 +218,74 @@ class ASRProvider(ASRProviderBase):
                 full_client_request.extend(payload_bytes)
                 await websocket.send(full_client_request)
 
+                # 完整请求已占序号 1，流式音频帧从序号 2 开始递增，否则服务端
+                # autoAssignedSequence 与请求序号不匹配，直接拒收该帧
+                seq = 2
+
                 # 2. 流式发送音频（最后一段使用 NEG_WITH_SEQUENCE 负序号）
-                for chunk, last in self.slice_data(pcm_data, segment_size):
-                    if last:
-                        audio_request = self._generate_header(
-                            message_type=CLIENT_AUDIO_ONLY_REQUEST,
-                            message_type_specific_flags=NEG_WITH_SEQUENCE,
-                        )
-                        seq = -seq
-                    else:
-                        audio_request = self._generate_header(
-                            message_type=CLIENT_AUDIO_ONLY_REQUEST,
-                            message_type_specific_flags=POS_SEQUENCE,
-                        )
-                    payload = gzip.compress(chunk)
-                    audio_request.extend(struct.pack(">i", seq))
-                    audio_request.extend(struct.pack(">I", len(payload)))
-                    audio_request.extend(payload)
-                    await websocket.send(audio_request)
-                    if not last:
-                        seq += 1
+                #    与官方 demo 一致：发送与接收并发，边发边收
+                async def _send_audio():
+                    nonlocal seq
+                    for chunk, last in self.slice_data(pcm_data, segment_size):
+                        if last:
+                            audio_request = self._generate_header(
+                                message_type=CLIENT_AUDIO_ONLY_REQUEST,
+                                message_type_specific_flags=NEG_WITH_SEQUENCE,
+                            )
+                            send_seq = -seq
+                        else:
+                            audio_request = self._generate_header(
+                                message_type=CLIENT_AUDIO_ONLY_REQUEST,
+                                message_type_specific_flags=POS_SEQUENCE,
+                            )
+                            send_seq = seq
+                        payload = gzip.compress(chunk)
+                        audio_request.extend(struct.pack(">i", send_seq))
+                        audio_request.extend(struct.pack(">I", len(payload)))
+                        audio_request.extend(payload)
+                        await websocket.send(audio_request)
+                        if not last:
+                            seq += 1
+                        # 模拟实时流节奏，避免一次性灌入导致服务端缓冲/丢帧
+                        await asyncio.sleep(self.seg_duration / 1000)
 
                 # 3. 接收结果，整句识别
                 texts = []
-                while True:
-                    res = await websocket.recv()
-                    result = parse_response(res)
-                    if "code" in result and result["code"] != 0:
-                        logger.bind(tag=TAG).error(f"SA-UC 2.0 识别错误: {result}")
-                        return None
-                    pm = result.get("payload_msg") or {}
-                    if isinstance(pm, dict):
-                        if pm.get("code") not in (0, 1013):  # 1013 无有效语音
-                            logger.bind(tag=TAG).error(f"SA-UC 2.0 识别错误: {pm}")
+                send_task = asyncio.create_task(_send_audio())
+                try:
+                    while True:
+                        res = await websocket.recv()
+                        result = parse_response(res)
+                        if "code" in result and result["code"] != 0:
+                            logger.bind(tag=TAG).error(f"SA-UC 2.0 识别错误: {result}")
                             return None
-                        for res_item in (pm.get("result") or []):
-                            t = res_item.get("text")
-                            if t:
-                                texts.append(t)
-                    if result.get("is_last_package"):
-                        break
+                        pm = result.get("payload_msg") or {}
+                        if isinstance(pm, dict):
+                            # 正常结果无 code 字段或 code=0；1013=无有效语音，均视为正常结束
+                            code = pm.get("code", 0)
+                            if code not in (0, 1013):
+                                logger.bind(tag=TAG).error(f"SA-UC 2.0 识别错误: {pm}")
+                                return None
+                            res_data = pm.get("result")
+                            # result 可能是 dict（含 text / utterances）或 list（utterances 列表）
+                            if isinstance(res_data, dict):
+                                if res_data.get("text"):
+                                    texts.append(res_data["text"])
+                                for item in (res_data.get("utterances") or []):
+                                    if isinstance(item, dict) and item.get("text"):
+                                        texts.append(item["text"])
+                            elif isinstance(res_data, list):
+                                for item in res_data:
+                                    if isinstance(item, dict) and item.get("text"):
+                                        texts.append(item["text"])
+                        if result.get("is_last_package"):
+                            break
+                finally:
+                    send_task.cancel()
+                    try:
+                        await send_task
+                    except asyncio.CancelledError:
+                        pass
 
                 text = "".join(texts).strip()
                 return text if text else ""
@@ -234,8 +296,10 @@ class ASRProvider(ASRProviderBase):
 
     @staticmethod
     def slice_data(data: bytes, chunk_size: int):
-        """将PCM数据按 chunk_size 切片，最后一段标记 last=True"""
+        """将PCM数据按 chunk_size 切片，最后一段标记 last=True；空数据不产出任何帧"""
         data_len = len(data)
+        if data_len <= 0:
+            return
         offset = 0
         while offset + chunk_size < data_len:
             yield data[offset: offset + chunk_size], False

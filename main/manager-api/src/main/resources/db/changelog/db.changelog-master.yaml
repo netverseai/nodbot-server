@@ -247,3 +247,10 @@ databaseChangeLog:
         - sqlFile:
             encoding: utf8
             path: classpath:db/changelog/202609130200.sql
+  - changeSet:
+      id: 202609130300
+      author: nodbot
+      changes:
+        - sqlFile:
+            encoding: utf8
+            path: classpath:db/changelog/202609130300.sql
