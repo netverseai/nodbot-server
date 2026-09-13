@@ -98,10 +98,11 @@ class ASRProvider(ASRProviderBase):
         # 注意：24000 是 TTS 输出采样率，与本处 ASR 输入无关
         self.format = config.get("format", "pcm")
         self.codec = config.get("codec", "raw")
-        self.rate = config.get("sample_rate", 16000)
-        self.bits = config.get("bits", 16)
-        self.channel = config.get("channel", 1)
-        self.seg_duration = config.get("seg_duration", 200)
+        # 数值字段统一 int 强转：config_json 可能以字符串形式下发，避免后续 /、//、* 运算抛 TypeError
+        self.rate = int(config.get("sample_rate", 16000))
+        self.bits = int(config.get("bits", 16))
+        self.channel = int(config.get("channel", 1))
+        self.seg_duration = int(config.get("seg_duration", 200))
 
         # request 参数
         self.enable_itn = config.get("enable_itn", True)
