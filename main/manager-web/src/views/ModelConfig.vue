@@ -100,6 +100,9 @@
                 <el-button size="mini" type="danger" icon="el-icon-delete" @click="batchDelete">
                   删除
                 </el-button>
+                <el-button size="mini" type="warning" icon="el-icon-refresh-right" @click="applyDefaultToAll">
+                  全部应用默认
+                </el-button>
               </div>
               <div class="custom-pagination">
 
@@ -440,6 +443,27 @@ export default {
           this.$message.success('设置默认模型成功')
           this.loadData()
         }
+      })
+    },
+    // 将当前默认模型应用到所有智能体
+    applyDefaultToAll() {
+      this.$confirm(`确定要将当前「${this.modelTypeText}」的默认配置应用到所有智能体吗？该操作会覆盖所有智能体的对应模型配置。`, '全部应用默认', {
+        confirmButtonText: '确定应用',
+        cancelButtonText: '取消',
+        type: 'warning'
+      }).then(() => {
+        Api.model.applyDefaultToAllAgents(this.activeTab, ({ data }) => {
+          if (data.code === 0) {
+            this.$message.success({
+              message: '已应用到所有智能体',
+              showClose: true
+            })
+          } else {
+            this.$message.error(data.msg || '应用失败')
+          }
+        })
+      }).catch(() => {
+        this.$message.info('已取消')
       })
     }
   },

@@ -147,6 +147,15 @@ public class ModelController {
         return new Result<Void>();
     }
 
+    @PutMapping("/{modelType}/apply-to-all-agents")
+    @Operation(summary = "将默认模型应用到所有智能体")
+    @RequiresPermissions("sys:role:superAdmin")
+    public Result<Void> applyDefaultToAllAgents(@PathVariable String modelType) {
+        modelConfigService.applyDefaultToAllAgents(modelType);
+        configService.getConfig(false);
+        return new Result<Void>();
+    }
+
     @GetMapping("/{modelId}/voices")
     @Operation(summary = "获取模型音色")
     @RequiresPermissions("sys:role:normal")

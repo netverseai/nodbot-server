@@ -9,6 +9,7 @@ import org.apache.commons.lang3.StringUtils;
 import org.springframework.stereotype.Service;
 
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
+import com.baomidou.mybatisplus.core.conditions.update.UpdateWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 
 import cn.hutool.core.collection.CollectionUtil;
@@ -214,5 +215,57 @@ public class ModelConfigServiceImpl extends BaseServiceImpl<ModelConfigDao, Mode
         entity.setIsDefault(isDefault);
         modelConfigDao.update(entity, new QueryWrapper<ModelConfigEntity>()
                 .eq("model_type", modelType));
+    }
+
+    @Override
+    public void applyDefaultToAllAgents(String modelType) {
+        // 找到指定类型的默认模型（MySQL collation 大小写不敏感，可用前端小写匹配 'TTS' 等）
+        ModelConfigEntity defaultModel = modelConfigDao.selectOne(
+                new QueryWrapper<ModelConfigEntity>()
+                        .eq("model_type", modelType)
+                        .eq("is_default", 1)
+                        .last("LIMIT 1"));
+        if (defaultModel == null) {
+            throw new RenException(ErrorCode.MODEL_CONFIG_NOT_EXIST);
+        }
+
+        String modelId = defaultModel.getId();
+        String column = null;
+        boolean isTts = false;
+        switch (modelType.toUpperCase()) {
+            case "ASR":
+                column = "asr_model_id";
+                break;
+            case "VAD":
+                column = "vad_model_id";
+                break;
+            case "LLM":
+                column = "llm_model_id";
+                break;
+            case "VLLM":
+                column = "vllm_model_id";
+                break;
+            case "TTS":
+                column = "tts_model_id";
+                isTts = true;
+                break;
+            case "MEMORY":
+                column = "mem_model_id";
+                break;
+            case "INTENT":
+                column = "intent_model_id";
+                break;
+            default:
+                return;
+        }
+
+        // 更新所有智能体对应的模型字段
+        UpdateWrapper<AgentEntity> wrapper = new UpdateWrapper<AgentEntity>()
+                .set(column, modelId);
+        // TTS 换默认模型时同步清空音色，避免保留旧模型音色导致失效（与模板换模型行为保持一致）
+        if (isTts) {
+            wrapper.set("tts_voice_id", null);
+        }
+        agentDao.update(null, wrapper);
     }
 }

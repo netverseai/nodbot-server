@@ -45,4 +45,11 @@ public interface ModelConfigService extends BaseService<ModelConfigEntity> {
      * @param isDefault 是否默认
      */
     void setDefaultModel(String modelType, int isDefault);
+
+    /**
+     * 将指定模型类型的默认模型应用到所有智能体
+     * 
+     * @param modelType 模型类型
+     */
+    void applyDefaultToAllAgents(String modelType);
 }

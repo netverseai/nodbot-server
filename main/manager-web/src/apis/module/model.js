@@ -199,6 +199,24 @@ export default {
       }).send()
   },
 
+  // 将默认模型应用到所有智能体
+  applyDefaultToAllAgents(modelType, callback) {
+    RequestService.sendRequest()
+      .url(`${getServiceUrl()}/models/${modelType}/apply-to-all-agents`)
+      .method('PUT')
+      .success((res) => {
+        RequestService.clearRequestTime()
+        callback(res)
+      })
+      .networkFail((err) => {
+        console.error('应用默认模型到所有智能体失败:', err)
+        this.$message.error(err.msg || '应用默认模型失败')
+        RequestService.reAjaxFun(() => {
+          this.applyDefaultToAllAgents(modelType, callback)
+        })
+      }).send()
+  },
+
   /**
    * 获取模型配置列表（支持查询参数）
    * @param {Object} params - 查询参数对象，例如 { name: 'test', modelType: 1 }
