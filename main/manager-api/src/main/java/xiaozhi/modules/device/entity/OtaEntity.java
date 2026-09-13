@@ -40,6 +40,9 @@ public class OtaEntity {
     @Schema(description = "固件路径")
     private String firmwarePath;
 
+    @Schema(description = "R2对象存储key（仅上传成功才写入，用于判断是否可并发直链下载）")
+    private String r2ObjectKey;
+
     @Schema(description = "排序")
     private Integer sort;
 

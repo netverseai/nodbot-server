@@ -6,7 +6,6 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.TimeZone;
-import java.util.UUID;
 
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.aop.framework.AopContext;
@@ -41,6 +40,8 @@ import xiaozhi.modules.device.entity.DeviceEntity;
 import xiaozhi.modules.device.entity.OtaEntity;
 import xiaozhi.modules.device.service.DeviceService;
 import xiaozhi.modules.device.service.OtaService;
+import xiaozhi.modules.device.storage.OtaStorageService;
+import xiaozhi.modules.device.util.OtaSignUtil;
 import xiaozhi.modules.device.vo.UserShowDeviceListVO;
 import xiaozhi.modules.security.user.SecurityUser;
 import xiaozhi.modules.sys.service.SysParamsService;
@@ -56,6 +57,7 @@ public class DeviceServiceImpl extends BaseServiceImpl<DeviceDao, DeviceEntity> 
     private final SysParamsService sysParamsService;
     private final RedisUtils redisUtils;
     private final OtaService otaService;
+    private final OtaStorageService otaStorageService;
 
     @Async
     public void updateDeviceConnectionInfo(String agentId, String deviceId, String appVersion) {
@@ -362,19 +364,27 @@ public class DeviceServiceImpl extends BaseServiceImpl<DeviceDao, DeviceEntity> 
         if (ota != null) {
             // 如果设备没有版本信息，或者OTA版本比设备版本新，则返回下载地址
             if (compareVersions(ota.getVersion(), currentVersion) > 0) {
-                String otaUrl = sysParamsService.getValue(Constant.SERVER_OTA, true);
-                if (StringUtils.isBlank(otaUrl) || otaUrl.equals("null")) {
-                    log.error("OTA地址未配置，请登录智控台，在参数管理找到【server.ota】配置");
-                    // 尝试从请求中获取
-                    HttpServletRequest request = ((ServletRequestAttributes) RequestContextHolder
-                            .getRequestAttributes())
-                            .getRequest();
-                    otaUrl = request.getRequestURL().toString();
+                // 优先下发对象存储（R2）直链：仅当固件记录已成功同步（r2_object_key 非空）才走直链，
+                // 避免「配置了 R2 但对象上传失败」时下发死链导致设备 404
+                String r2Url = StringUtils.isNotBlank(ota.getR2ObjectKey())
+                        ? otaStorageService.getPublicUrl(ota.getR2ObjectKey())
+                        : null;
+                if (StringUtils.isNotBlank(r2Url)) {
+                    downloadUrl = r2Url;
+                } else {
+                    // 未启用 R2：走签名下载链接（本地流式 + Range，无状态、可水平扩展）
+                    String otaUrl = sysParamsService.getValue(Constant.SERVER_OTA, true);
+                    if (StringUtils.isBlank(otaUrl) || otaUrl.equals("null")) {
+                        log.error("OTA地址未配置，请登录智控台，在参数管理找到【server.ota】配置");
+                        HttpServletRequest request = ((ServletRequestAttributes) RequestContextHolder
+                                .getRequestAttributes())
+                                .getRequest();
+                        otaUrl = request.getRequestURL().toString();
+                    }
+                    String secret = sysParamsService.getValue(Constant.SERVER_SECRET, true);
+                    String token = OtaSignUtil.sign(ota.getId(), secret, OtaSignUtil.DEFAULT_TTL_MILLIS);
+                    downloadUrl = otaUrl.replace("/ota/", "/otaMag/download/") + token;
                 }
-                // 将URL中的/ota/替换为/otaMag/download/
-                String uuid = UUID.randomUUID().toString();
-                redisUtils.set(RedisKeys.getOtaIdKey(uuid), ota.getId());
-                downloadUrl = otaUrl.replace("/ota/", "/otaMag/download/") + uuid;
             }
         }
 

@@ -45,6 +45,14 @@
                         {{ formatDate(scope.row.updateDate) }}
                     </template>
                 </el-table-column>
+                <el-table-column label="R2 同步" align="center">
+                    <template slot-scope="scope">
+                        <span v-if="scope.row.r2ObjectKey" class="r2-synced"
+                            :title="scope.row.r2ObjectKey">已同步</span>
+                        <el-button v-else size="mini" type="text" class="r2-resync"
+                            @click="resyncR2(scope.row)">重新同步到 R2</el-button>
+                    </template>
+                </el-table-column>
                 <el-table-column label="操作" align="center">
                     <template slot-scope="scope">
                         <el-button size="mini" type="text"
@@ -380,6 +388,26 @@ export default {
                 }
             });
         },
+        resyncR2(firmware) {
+            if (!firmware || !firmware.id) {
+                this.$message.error('固件信息不完整');
+                return;
+            }
+            Api.ota.resyncR2(firmware.id, (res) => {
+                if (res.data.code === 0) {
+                    this.$message.success({
+                        message: 'R2 同步成功',
+                        showClose: true
+                    });
+                    this.fetchFirmwareList();
+                } else {
+                    this.$message.error({
+                        message: res.data.msg || 'R2 同步失败，请检查对象存储配置后重试',
+                        showClose: true
+                    });
+                }
+            });
+        },
         formatDate,
         formatFileSize,
         async getFirmwareTypes() {
@@ -401,4 +429,28 @@ export default {
 
 <style lang="scss" scoped>
 @import "./management.scss";
+
+.r2-synced {
+    display: inline-flex;
+    align-items: center;
+    color: #18b566;
+    font-size: 12px;
+    cursor: default;
+    white-space: nowrap;
+    &::before {
+        content: "";
+        width: 8px;
+        height: 8px;
+        margin-right: 5px;
+        border-radius: 50%;
+        background: #18b566;
+    }
+}
+
+.r2-resync {
+    color: #e6a23c;
+    &:hover {
+        color: #c3801f;
+    }
+}
 </style>

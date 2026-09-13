@@ -11,14 +11,19 @@ import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 
 import io.micrometer.common.util.StringUtils;
+import lombok.RequiredArgsConstructor;
 import xiaozhi.common.page.PageData;
 import xiaozhi.common.service.impl.BaseServiceImpl;
 import xiaozhi.modules.device.dao.OtaDao;
 import xiaozhi.modules.device.entity.OtaEntity;
 import xiaozhi.modules.device.service.OtaService;
+import xiaozhi.modules.device.storage.OtaStorageService;
 
 @Service
+@RequiredArgsConstructor
 public class OtaServiceImpl extends BaseServiceImpl<OtaDao, OtaEntity> implements OtaService {
+
+    private final OtaStorageService otaStorageService;
 
     @Override
     public PageData<OtaEntity> page(Map<String, Object> params) {
@@ -52,15 +57,28 @@ public class OtaServiceImpl extends BaseServiceImpl<OtaDao, OtaEntity> implement
 
         entity.setUpdateDate(new Date());
         baseDao.updateById(entity);
+        // 同步到 R2；成功才写入 r2ObjectKey，避免静默失败仍下发直链导致设备 404
+        syncR2ObjectKey(entity);
+        baseDao.updateById(trimForUpdate(entity));
     }
 
     @Override
     public void delete(String[] ids) {
+        // 先取要删除固件的对象 key，用于同步清理 R2
+        List<OtaEntity> list = baseDao.selectBatchIds(Arrays.asList(ids));
         baseDao.deleteBatchIds(Arrays.asList(ids));
+        if (list != null) {
+            for (OtaEntity entity : list) {
+                if (StringUtils.isNotBlank(entity.getR2ObjectKey())) {
+                    otaStorageService.removeObject(entity.getR2ObjectKey());
+                }
+            }
+        }
     }
 
     @Override
     public boolean save(OtaEntity entity) {
+        boolean inserted = true;
         QueryWrapper<OtaEntity> queryWrapper = new QueryWrapper<OtaEntity>()
                 .eq("type", entity.getType());
         // 同类固件只保留最新的一条
@@ -69,9 +87,59 @@ public class OtaServiceImpl extends BaseServiceImpl<OtaDao, OtaEntity> implement
             OtaEntity otaBefore = otaList.getFirst();
             entity.setId(otaBefore.getId());
             baseDao.updateById(entity);
-            return true;
+            inserted = false;
+        } else {
+            baseDao.insert(entity);
         }
-        return baseDao.insert(entity) > 0;
+        // 同步到 R2；成功才写入 r2ObjectKey
+        syncR2ObjectKey(entity);
+        baseDao.updateById(trimForUpdate(entity));
+        return inserted;
+    }
+
+    /**
+     * 将本地固件同步上传到 R2，仅在成功后把对象 key 写回实体。
+     */
+    private void syncR2ObjectKey(OtaEntity entity) {
+        if (StringUtils.isBlank(entity.getFirmwarePath())) {
+            return;
+        }
+        if (!otaStorageService.isConfigured()) {
+            return;
+        }
+        String objectKey = otaStorageService.uploadLocalFile(entity.getFirmwarePath());
+        if (objectKey != null) {
+            entity.setR2ObjectKey(objectKey);
+        }
+    }
+
+    /** 仅回写需要持久化的字段，避免覆盖请求类其它脏数据。 */
+    private OtaEntity trimForUpdate(OtaEntity entity) {
+        OtaEntity patch = new OtaEntity();
+        patch.setId(entity.getId());
+        patch.setR2ObjectKey(entity.getR2ObjectKey());
+        patch.setUpdateDate(new Date());
+        return patch;
+    }
+
+    @Override
+    public boolean resyncR2(String id) {
+        if (!otaStorageService.isConfigured()) {
+            return false;
+        }
+        OtaEntity entity = baseDao.selectById(id);
+        if (entity == null || StringUtils.isBlank(entity.getFirmwarePath())) {
+            return false;
+        }
+        String r2ObjectKeyBefore = entity.getR2ObjectKey();
+        syncR2ObjectKey(entity);
+        if (StringUtils.isBlank(entity.getR2ObjectKey())) {
+            // 重同步失败；若之前已有 key，回滚避免误清
+            entity.setR2ObjectKey(r2ObjectKeyBefore);
+            return false;
+        }
+        baseDao.updateById(trimForUpdate(entity));
+        return true;
     }
 
     @Override

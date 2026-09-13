@@ -19,4 +19,12 @@ public interface OtaService extends BaseService<OtaEntity> {
     void delete(String[] ids);
 
     OtaEntity getLatestOta(String type);
+
+    /**
+     * 将指定固件重新同步到 R2（读本地文件上传，成功则回写 r2_object_key）。
+     *
+     * @param id 固件ID
+     * @return 同步成功返回 true
+     */
+    boolean resyncR2(String id);
 }

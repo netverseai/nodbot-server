@@ -119,5 +119,21 @@ export default {
                     this.getDownloadUrl(id, callback);
                 });
             }).send();
+    },
+    // 重新同步固件到 R2
+    resyncR2(id, callback) {
+        RequestService.sendRequest()
+            .url(`${getServiceUrl()}/otaMag/resyncR2/${id}`)
+            .method('POST')
+            .success((res) => {
+                RequestService.clearRequestTime();
+                callback(res);
+            })
+            .networkFail((err) => {
+                console.error('重新同步到R2失败:', err);
+                RequestService.reAjaxFun(() => {
+                    this.resyncR2(id, callback);
+                });
+            }).send();
     }
 }
