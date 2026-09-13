@@ -238,11 +238,12 @@ public class OTAMagController {
         // 7. 磁盘流式输出，不整包读入内存
         long from = start;
         long to = end;
+        final String streamFirmwareId = firmwareId;
         return outputStream -> {
             try {
                 copyRange(path, from, to, outputStream);
             } catch (IOException e) {
-                logger.error("Streaming firmware output failed for ID: {}", firmwareId, e);
+                logger.error("Streaming firmware output failed for ID: {}", streamFirmwareId, e);
             }
         };
     }
