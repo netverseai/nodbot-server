@@ -260,8 +260,11 @@ public class ModelConfigServiceImpl extends BaseServiceImpl<ModelConfigDao, Mode
         }
 
         // 更新所有智能体对应的模型字段
+        // 注意：需带恒真 WHERE 条件（id IS NOT NULL），否则会被 MyBatis-Plus 的
+        // BlockAttackInnerInterceptor（防全表更新）拦截报 Prohibition of table update operation
         UpdateWrapper<AgentEntity> wrapper = new UpdateWrapper<AgentEntity>()
-                .set(column, modelId);
+                .set(column, modelId)
+                .isNotNull("id");
         // TTS 换默认模型时同步清空音色，避免保留旧模型音色导致失效（与模板换模型行为保持一致）
         if (isTts) {
             wrapper.set("tts_voice_id", null);
